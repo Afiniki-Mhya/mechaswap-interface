@@ -24,7 +24,7 @@ import RowingIcon from "@mui/icons-material/Rowing";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
 
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 import algosdk from "algosdk";
 //import { MarketplaceContext } from "../../store/MarketplaceContext";

@@ -8,7 +8,7 @@ import { ListedToken } from "../../types";
 import { useNavigate } from "react-router-dom";
 import BuySaleModal from "../modals/BuySaleModal";
 import { toast } from "react-toastify";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 import { getAlgorandClients } from "../../wallets";
 import { CONTRACT, arc200 } from "ulujs";

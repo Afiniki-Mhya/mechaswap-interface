@@ -10,7 +10,7 @@ import ThemeSelector from "../ThemeSelector";
 import Box from "@mui/material/Box";
 import Popper from "@mui/material/Popper";
 import Fade from "@mui/material/Fade";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { Chip, Divider, Stack } from "@mui/material";
 
 import { useCopyToClipboard } from "usehooks-ts";

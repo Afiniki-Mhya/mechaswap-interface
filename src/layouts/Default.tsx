@@ -3,7 +3,7 @@ import styled from "styled-components";
 import Footer from "../components/Footer";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 const LayoutRoot = styled.div`
   height: 100%;

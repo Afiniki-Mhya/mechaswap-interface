@@ -9,9 +9,9 @@ export const decodeRoyalties = (royalties: string) => {
   const creator1Points = buf.slice(2, 4).readUInt16BE(0);
   const creator2Points = buf.slice(4, 6).readUInt16BE(0);
   const creator3Points = buf.slice(6, 8).readUInt16BE(0);
-  const creator1Address = encodeAddress(buf.slice(8, 8 + 32 * 1));
-  const creator2Address = encodeAddress(buf.slice(8 + 32, 8 + 32 * 2));
-  const creator3Address = encodeAddress(buf.slice(8 + 32 * 2, 8 + 32 * 3));
+  const creator1Address = encodeAddress(new Uint8Array(buf.slice(8, 8 + 32 * 1)));
+  const creator2Address = encodeAddress(new Uint8Array(buf.slice(8 + 32, 8 + 32 * 2)));
+  const creator3Address = encodeAddress(new Uint8Array(buf.slice(8 + 32 * 2, 8 + 32 * 3)));
   const creatorAddressCount = [
     creator1Address,
     creator2Address,

@@ -38,7 +38,7 @@ import { getListings } from "../../store/listingSlice";
 import { getRankings } from "../../utils/mp";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { custom, useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { Button as MButton } from "@mui/material";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";

@@ -10,7 +10,7 @@ import {
   Grid,
   Typography,
 } from "@mui/material";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import PaymentCurrencyRadio from "../../PaymentCurrencyRadio";
 import VoiIcon from "static/crypto-icons/0.svg";
 

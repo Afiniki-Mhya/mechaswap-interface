@@ -1,4 +1,8 @@
-import { PROVIDER_ID } from "@txnlab/use-wallet";
+import {
+  WalletId,
+  WalletManager,
+  NetworkId
+} from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 
 const getDynamicDeflyWalletConnect = async () => {
@@ -24,48 +28,38 @@ const getDynamicLuteConnect = async () => {
   return LuteConnect;
 };
 
-export const getProviderInit: any = () => {
-  do {
-    try {
-      return {
-        // providers
-        //  algorand
-        //  algorand-testnet
-        //    pera
-        //    daffi
-        //    exodus
-        //    defly
-        //    kibisis
-        //  voi-testnet
-        //    defly (A-Wallet)
-        //    kibisis
-        //    lute
-        providers: [
-          {
-            id: PROVIDER_ID.DEFLY,
-            getDynamicClient: getDynamicDeflyWalletConnect,
-          },
-          {
-            id: PROVIDER_ID.LUTE,
-            getDynamicClient: getDynamicLuteConnect,
-            clientOptions: { siteName: "Nautilus" },
-          },
-          { id: PROVIDER_ID.KIBISIS },
-        ],
-        nodeConfig: {
-          network: "voi-testnet",
-          nodeServer: "https://testnet-api.voi.nodly.io",
-          nodeToken: "",
-          nodePort: "443",
+export const getProviderInit = () => {
+  try {
+    return new WalletManager({
+      wallets: [
+        {
+          id: WalletId.DEFLY,
+          options: {
+            shouldShowSignTxnToast: false
+          }
         },
-        algosdkStatic: algosdk,
-        debug: true,
-      };
-    } catch (error) {
-      console.error(error);
-    }
-    setTimeout(() => {}, 4000);
-  } while (true);
+        {
+          id: WalletId.LUTE,
+          options: {
+            siteName: "Nautilus"
+          }
+        },
+        { id: WalletId.KIBISIS }
+      ],
+      defaultNetwork: NetworkId.TESTNET
+      // networks: [{algod:
+      //   // id: "voi-testnet",
+      //   // nodeServer: "https://testnet-api.voi.nodly.io",
+      //   // nodeToken: "",
+      //   // nodePort: "443"
+      // }],
+      // algosdkStatic: algosdk,
+      // debug: true
+    });
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 };
 
 export const getCurrentNode = () => {
@@ -101,7 +95,7 @@ export const getCurrentNodeEnv = () => {
   }
   return {
     ALGO_SERVER,
-    ALGO_INDEXER_SERVER,
+    ALGO_INDEXER_SERVER
   };
 };
 
@@ -116,6 +110,6 @@ export const getAlgorandClients = () => {
   const indexerClient = new algosdk.Indexer(token, indexerServer, port);
   return {
     algodClient,
-    indexerClient,
+    indexerClient
   };
 };

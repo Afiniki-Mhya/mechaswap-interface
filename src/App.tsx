@@ -1,5 +1,5 @@
 import React from "react";
-import { WalletProvider, useInitializeProviders } from "@txnlab/use-wallet";
+import { useWallet, WalletProvider } from "@txnlab/use-wallet-react";
 import { HashRouter as Router, Route, Routes } from "react-router-dom";
 import { Provider, useSelector } from "react-redux";
 import { store, persistor, RootState } from "./store/store";
@@ -51,22 +51,29 @@ const AppContainer: React.FC<AppContainerProps> = ({ children }) => {
   );
 };
 
+// Create a new component that uses the wallet hook
+const WalletInitializer: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const walletProviders = useWallet();
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
-  const providers = useInitializeProviders(getProviderInit());
   return (
-    <WalletProvider value={providers}>
+    <WalletProvider manager={getProviderInit()}>
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
-          <AppContainer>
-            <Router>
-              {/*<Navbar />*/}
-              <Routes>
-                {routes.map((el) => (
-                  <Route path={el.path} Component={el.Component} />
-                ))}
-              </Routes>
-            </Router>
-          </AppContainer>
+          <WalletInitializer>
+            <AppContainer>
+              <Router>
+                {/*<Navbar />*/}
+                <Routes>
+                  {routes.map((el) => (
+                    <Route key={el.path} path={el.path} Component={el.Component} />
+                  ))}
+                </Routes>
+              </Router>
+            </AppContainer>
+          </WalletInitializer>
         </PersistGate>
       </Provider>
       <ToastContainer />

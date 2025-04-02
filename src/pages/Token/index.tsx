@@ -8,7 +8,7 @@ import axios from "axios";
 import styled from "styled-components";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "react-toastify";
-import { useWallet } from "@txnlab/use-wallet";
+import { useWallet } from "@txnlab/use-wallet-react";
 import { CONTRACT, arc72 } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
 import NFTTabs from "../../components/NFTTabs";
