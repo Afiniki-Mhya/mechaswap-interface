@@ -48,6 +48,8 @@ import BigNumber from "bignumber.js";
 import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import NetworkSelector from "../Network/page";
+import WalletModal from "../Network/page";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -245,12 +247,12 @@ const InterstitialBanner = () => {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  // const [isModalOpen, setIsModalOpen] = useState(false);
+
   const {
     activeAccount,
-    providers,
-    signTransactions,
-    sendTransactions,
-    connectedAccounts,
+    wallets,
+    signTransactions: signer,
   } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
@@ -275,13 +277,13 @@ export const Home: React.FC = () => {
   }, [owner]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
-    provider?.connect();
+    const wallet = wallets?.find((el) => el.id === "kibisis");
+    wallet?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
-    provider?.disconnect();
+    const wallet = wallets?.find((el) => el.id === "kibisis");
+    wallet?.disconnect();
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -428,7 +430,7 @@ export const Home: React.FC = () => {
       );
 
       let customR;
-      for (const p1 of /*arc72 approve pmt*/ [0, 28500]) {
+      for (const p1 of /*arc72 approve pmt*/[0, 28500]) {
         const buildO = [];
         const transfers = [];
         // apply tokens towards collection minimum balance
@@ -478,11 +480,20 @@ export const Home: React.FC = () => {
       }
       if (!customR.success) throw new Error(customR.error);
       await toast.promise(
-        signTransactions(
-          customR.txns.map(
-            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-          )
-        ).then(sendTransactions),
+        (async () => {
+          const signedTxns = await signer(
+            customR.txns.map(
+              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+            )
+          );
+
+          // Send the signed transactions
+          const { algodClient } = getAlgorandClients();
+          const txnResponse = await algodClient.sendRawTransaction(
+            signedTxns.filter(Boolean) as Uint8Array[]
+          ).do();
+          return txnResponse;
+        })(),
         {
           pending: "Pending transaction to create swap",
           success: "Swap created successfully",
@@ -602,15 +613,13 @@ export const Home: React.FC = () => {
           }}
         >
           {!activeAccount ? (
-            <img
-              style={{
-                height: "45px",
-                cursor: "pointer",
-                zIndex: 100,
-              }}
-              src={WalletIcon}
-              onClick={handleWalletIconClick}
-            />
+
+            <WalletModal />
+
+
+
+
+
           ) : (
             <div
               style={{
@@ -625,7 +634,7 @@ export const Home: React.FC = () => {
                   cursor: "pointer",
                   zIndex: 100,
                 }}
-                src={WalletIcon}
+                src={""}
               />
               <Popper
                 id={id}
@@ -652,7 +661,9 @@ export const Home: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account, i) => {
+                    {wallets.flatMap(wallet =>
+                      wallet.accounts.map(account => ({ ...account, walletId: wallet.id }))
+                    ).map((account, i) => {
                       return (
                         <li
                           style={{
@@ -671,17 +682,14 @@ export const Home: React.FC = () => {
                               {account.address.slice(-4)}
                             </div>
                             <div>
-                              {activeAccount.providerId ===
-                                account.providerId &&
-                              activeAccount.address ===
-                                account.address ? null : (
+                              {activeAccount.address === account.address ? null : (
                                 <button
                                   onClick={() => {
-                                    const provider = providers?.find(
+                                    const wallet = wallets?.find(
                                       (el: any) =>
-                                        el.metadata.id === account.providerId
+                                        el.id === account.walletId
                                     );
-                                    provider?.setActiveAccount(account.address);
+                                    wallet?.setActiveAccount(account.address);
                                   }}
                                 >
                                   Connect
@@ -893,9 +901,13 @@ export const Home: React.FC = () => {
                 sx={{ borderRadius: "30px" }}
                 variant="contained"
               >
-                Create Swap
+                Create SWAP
               </Button>
             ) : null}
+
+
+            {/* NETWORK SELECTOR */}
+            {/* <NetworkSelector /> */}
           </Stack>
         </Container>
       </div>

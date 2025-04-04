@@ -235,22 +235,10 @@ export const Swap: React.FC = () => {
 
   const [copiedText, copy] = useCopyToClipboard();
 
-  const handleCopy = (text: string) => () => {
-    copy(text)
-      .then(() => {
-        toast.success("Copied sharable link!");
-      })
-      .catch((error: any) => {
-        toast.error("Failed to copy!");
-      });
-  };
-
   const {
     activeAccount,
-    providers,
-    signTransactions,
-    sendTransactions,
-    connectedAccounts,
+    wallets,
+    signTransactions: signer,
   } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
@@ -345,13 +333,13 @@ export const Swap: React.FC = () => {
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
-    provider?.connect();
+    const wallet = wallets?.find((el) => el.id === "kibisis");
+    wallet?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
-    provider?.disconnect();
+    const wallet = wallets?.find((el) => el.id === "kibisis");
+    wallet?.disconnect();
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -538,11 +526,20 @@ export const Swap: React.FC = () => {
       if (!customR.success) throw new Error("Failed to execute swap");
 
       await toast.promise(
-        signTransactions(
-          customR.txns.map(
-            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-          )
-        ).then(sendTransactions),
+        (async () => {
+          const signedTxns = await signer(
+            customR.txns.map(
+              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+            )
+          );
+          
+          // Send the signed transactions
+          const { algodClient } = getAlgorandClients();
+          const txnResponse = await algodClient.sendRawTransaction(
+            signedTxns.filter(Boolean) as Uint8Array[]
+          ).do();
+          return txnResponse;
+        })(),
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
@@ -621,6 +618,16 @@ export const Swap: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
+  const handleCopy = (text: string) => () => {
+    copy(text)
+      .then(() => {
+        toast.success("Copied sharable link!");
+      })
+      .catch((error: any) => {
+        toast.error("Failed to copy!");
+      });
+  };
+
   return !isLoading ? (
     <Layout>
       <div
@@ -692,7 +699,9 @@ export const Swap: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account, i) => {
+                    {wallets.flatMap(wallet => 
+                      wallet.accounts.map(account => ({...account, walletId: wallet.id}))
+                    ).map((account, i) => {
                       return (
                         <li
                           style={{
@@ -711,17 +720,13 @@ export const Swap: React.FC = () => {
                               {account.address.slice(-4)}
                             </div>
                             <div>
-                              {activeAccount.providerId ===
-                                account.providerId &&
-                              activeAccount.address ===
-                                account.address ? null : (
+                              {activeAccount.address === account.address ? null : (
                                 <button
                                   onClick={() => {
-                                    const provider = providers?.find(
-                                      (el: any) =>
-                                        el.metadata.id === account.providerId
+                                    const wallet = wallets?.find(
+                                      (el: any) => el.id === account.walletId
                                     );
-                                    provider?.setActiveAccount(account.address);
+                                    wallet?.setActiveAccount(account.address);
                                   }}
                                 >
                                   Connect
