@@ -48,6 +48,7 @@ import BigNumber from "bignumber.js";
 import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import WalletModal from "../Network/page";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -247,11 +248,11 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
   const {
     activeAccount,
-    providers,
     signTransactions,
-    sendTransactions,
-    connectedAccounts,
+    transactionSigner,
+    activeWalletAccounts, wallets
   } = useWallet();
+
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
@@ -274,13 +275,13 @@ export const Home: React.FC = () => {
     });
   }, [owner]);
   const handleWalletIconClick = () => {
-    if (activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
+    if (activeAccount) wallets;
+    const provider = wallets?.find((el) => el?.metadata?.name === "kibisis");
     provider?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
+    const provider = wallets?.find((el) => el.metadata?.name === "kibisis");
     provider?.disconnect();
   };
   const handleSwapButtonClick = async () => {
@@ -428,7 +429,7 @@ export const Home: React.FC = () => {
       );
 
       let customR;
-      for (const p1 of /*arc72 approve pmt*/ [0, 28500]) {
+      for (const p1 of /*arc72 approve pmt*/[0, 28500]) {
         const buildO = [];
         const transfers = [];
         // apply tokens towards collection minimum balance
@@ -482,7 +483,7 @@ export const Home: React.FC = () => {
           customR.txns.map(
             (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions),
+        ).then(signTransactions),
         {
           pending: "Pending transaction to create swap",
           success: "Swap created successfully",
@@ -598,19 +599,11 @@ export const Home: React.FC = () => {
             padding: "10px",
             display: "flex",
             justifyContent: "start",
-            gap: "10px",
+            gap: "12px",
           }}
         >
           {!activeAccount ? (
-            <img
-              style={{
-                height: "45px",
-                cursor: "pointer",
-                zIndex: 100,
-              }}
-              src={WalletIcon}
-              onClick={handleWalletIconClick}
-            />
+            <WalletModal />
           ) : (
             <div
               style={{
@@ -652,46 +645,40 @@ export const Home: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account, i) => {
-                      return (
-                        <li
-                          style={{
-                            listStyleType: "none",
-                            height: "30px",
-                          }}
-                          key={i}
-                        >
-                          <Stack
-                            direction="row"
-                            gap={2}
-                            sx={{ justifyContent: "space-between" }}
+                    {wallets && // Conditional Check
+                      wallets?.map((account, i) => {
+                        return (
+                          <li
+                            style={{
+                              listStyleType: "none",
+                              height: "30px",
+                            }}
+                            key={i}
                           >
-                            <div>
-                              {account.address.slice(0, 4)}...
-                              {account.address.slice(-4)}
-                            </div>
-                            <div>
-                              {activeAccount.providerId ===
-                                account.providerId &&
-                              activeAccount.address ===
-                                account.address ? null : (
-                                <button
-                                  onClick={() => {
-                                    const provider = providers?.find(
-                                      (el: any) =>
-                                        el.metadata.id === account.providerId
-                                    );
-                                    provider?.setActiveAccount(account.address);
-                                  }}
-                                >
-                                  Connect
-                                </button>
-                              )}
-                            </div>
-                          </Stack>
-                        </li>
-                      );
-                    })}
+                            <Stack
+                              direction="row"
+                              gap={2}
+                              sx={{ justifyContent: "space-between" }}
+                            >
+                              <div>
+                                {account.activeAccount?.address.slice(0, 4)}...
+                                {account.activeAccount?.address.slice(-4)}
+                              </div>
+                              <div>
+                                {account?.isConnected ? null : (
+                                  <button
+                                    onClick={() => {
+                                      account?.connect()
+                                    }}
+                                  >
+                                    Connect
+                                  </button>
+                                )}
+                              </div>
+                            </Stack>
+                          </li>
+                        );
+                      })}
                   </ul>
                 </Box>
               </Popper>

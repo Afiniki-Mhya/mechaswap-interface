@@ -229,29 +229,58 @@ function shuffleArray<T>(array: T[]): T[] {
 
 const mp212 = 40433943;
 
+// Define the structure of the wallet object
+interface Wallet {
+    id: string;
+    metadata: {
+        name: string;
+        // Add other properties as needed
+    };
+    accounts: Array<{
+        address: string;
+        // Add other properties as needed
+    }>;
+}
+
+// Define your own WalletContextType based on the expected structure
+interface WalletContextType {
+    wallets: Wallet[]; // Include wallets
+    activeAccount: any; // Adjust the type as necessary
+    connectedAccounts: any[]; // Adjust the type as necessary
+    providers: any[]; // Adjust the type as necessary
+    isReady: boolean; // Include isReady
+    signTransactions: (transactions: any[]) => Promise<void>; // Adjust types as necessary
+    sendTransactions: (transactions: Uint8Array[]) => Promise<void>; // Adjust types as necessary
+}
+
+// Extend the WalletContextType to include connectedAccounts, wallets, activeAccount, providers, isReady, signTransactions, and sendTransactions
+interface ExtendedWalletContextType extends WalletContextType {
+  // Add any additional properties if needed
+}
+
+// Assuming the structure of the provider object
+interface Provider {
+    metadata: {
+        id: string;
+        // Add other properties as needed
+    };
+    setActiveAccount: (address: string) => void; // Adjust the type as necessary
+}
+
 export const Swap: React.FC = () => {
   const { id: swapIdStr } = useParams();
   const swapId = parseInt(swapIdStr || "0");
 
   const [copiedText, copy] = useCopyToClipboard();
 
-  const handleCopy = (text: string) => () => {
-    copy(text)
-      .then(() => {
-        toast.success("Copied sharable link!");
-      })
-      .catch((error: any) => {
-        toast.error("Failed to copy!");
-      });
-  };
-
   const {
+    wallets,
     activeAccount,
+    connectedAccounts,
     providers,
     signTransactions,
     sendTransactions,
-    connectedAccounts,
-  } = useWallet();
+  } = useWallet() as WalletContextType;
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
@@ -345,12 +374,12 @@ export const Swap: React.FC = () => {
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
+    const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
     provider?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const provider = providers?.find((el) => el.metadata?.id === "kibisis");
+    const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
     provider?.disconnect();
   };
   const handleSwapButtonClick = async () => {
@@ -537,15 +566,19 @@ export const Swap: React.FC = () => {
 
       if (!customR.success) throw new Error("Failed to execute swap");
 
+      const transactions = customR.txns.map(
+        (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+      );
+
+      // Filter out any null values
+      const validTransactions = transactions.filter(txn => txn !== null);
+
       await toast.promise(
-        signTransactions(
-          customR.txns.map(
-            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-          )
-        ).then(sendTransactions),
+        signTransactions(validTransactions).then(() => sendTransactions(validTransactions)),
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
+          error: "Swap execution failed",
         }
       );
 
@@ -621,6 +654,16 @@ export const Swap: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
+  const handleCopy = (text: string) => {
+    copy(text)
+      .then(() => {
+        toast.success("Copied to clipboard!");
+      })
+      .catch((error) => {
+        toast.error("Failed to copy!");
+      });
+  };
+
   return !isLoading ? (
     <Layout>
       <div
@@ -692,7 +735,7 @@ export const Swap: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account, i) => {
+                    {connectedAccounts.map((account: any, i) => {
                       return (
                         <li
                           style={{
@@ -711,14 +754,14 @@ export const Swap: React.FC = () => {
                               {account.address.slice(-4)}
                             </div>
                             <div>
-                              {activeAccount.providerId ===
+                              {activeAccount.address ===
                                 account.providerId &&
                               activeAccount.address ===
                                 account.address ? null : (
                                 <button
                                   onClick={() => {
                                     const provider = providers?.find(
-                                      (el: any) =>
+                                      (el: Provider) =>
                                         el.metadata.id === account.providerId
                                     );
                                     provider?.setActiveAccount(account.address);
@@ -944,9 +987,7 @@ export const Swap: React.FC = () => {
               isValid ? (
                 selectedToken.owner === activeAccount?.address || "" ? (
                   <Button
-                    onClick={handleCopy(
-                      `https://mechaswap.nautilus.sh/#/swap/${swapId}`
-                    )}
+                    onClick={() => handleCopy(`https://mechaswap.nautilus.sh/#/swap/${swapId}`)}
                     size="large"
                     sx={{ borderRadius: "30px" }}
                     variant="contained"

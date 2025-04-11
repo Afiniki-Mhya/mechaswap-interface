@@ -106,11 +106,9 @@ export const Account: React.FC = () => {
 
   /* Wallet */
   const {
-    activeAccount,
-    providers,
-    connectedAccounts,
+    activeAccount,activeWalletAccounts,
+  
     signTransactions,
-    sendTransactions,
   } = useWallet();
 
   /* Copy to clipboard */
@@ -602,7 +600,7 @@ export const Account: React.FC = () => {
           customR.txns.map(
             (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
           )
-        ).then(sendTransactions);
+        ).then(signTransactions);
       }
       // VIA Sale
       else {
@@ -704,7 +702,7 @@ export const Account: React.FC = () => {
                 customR.txns.map(
                   (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
                 )
-              ).then(sendTransactions),
+              ).then(signTransactions),
               {
                 pending: `Transaction signature pending setup recipient account (${
                   i + 1
@@ -777,7 +775,7 @@ export const Account: React.FC = () => {
             customR.txns.map(
               (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
             )
-          ).then(sendTransactions),
+          ).then(signTransactions),
           {
             pending: `Transaction signature pending... ${((str) =>
               str[0].toUpperCase() + str.slice(1))(
@@ -836,7 +834,7 @@ export const Account: React.FC = () => {
       const txns = a_sale_deleteListingR.txns;
       await signTransactions(
         txns.map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-      ).then(sendTransactions);
+      ).then(signTransactions);
       toast.success("Unlist successful!");
     } catch (e: any) {
       console.log(e);
@@ -941,9 +939,9 @@ export const Account: React.FC = () => {
       const txns = customR.txns;
       const res = await signTransactions(
         txns.map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-      ).then(sendTransactions);
+      ).then(signTransactions);
       toast.success(`NFT Transfer successful! Page will reload momentarily.`);
-      if (connectedAccounts.map((a) => a.address).includes(addr)) {
+      if (activeWalletAccounts?.map((a) => a.address).includes(addr)) {
         setNfts([
           ...nfts.slice(0, selected),
           { ...nft, owner: addr },
