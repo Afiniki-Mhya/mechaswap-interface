@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import Layout from "../../layouts/Default";
 import {
   AppBar,
@@ -231,26 +231,22 @@ const mp212 = 40433943;
 
 // Define the structure of the wallet object
 interface Wallet {
-    id: string;
-    metadata: {
-        name: string;
-        // Add other properties as needed
-    };
-    accounts: Array<{
-        address: string;
-        // Add other properties as needed
-    }>;
+  id: string;
+  metadata: {
+    name: string;
+    // Add other properties as needed
+  };
+  accounts: Array<{
+    address: string;
+    // Add other properties as needed
+  }>;
 }
 
 // Define your own WalletContextType based on the expected structure
 interface WalletContextType {
-    wallets: Wallet[]; // Include wallets
-    activeAccount: any; // Adjust the type as necessary
-    connectedAccounts: any[]; // Adjust the type as necessary
-    providers: any[]; // Adjust the type as necessary
-    isReady: boolean; // Include isReady
-    signTransactions: (transactions: any[]) => Promise<void>; // Adjust types as necessary
-    sendTransactions: (transactions: Uint8Array[]) => Promise<void>; // Adjust types as necessary
+  wallets: Wallet[]; // Include wallets
+  activeAccount: any; // Adjust the type as necessary
+  signTransactions: (transactions: any[]) => Promise<void>; // Adjust types as necessary
 }
 
 // Extend the WalletContextType to include connectedAccounts, wallets, activeAccount, providers, isReady, signTransactions, and sendTransactions
@@ -260,11 +256,11 @@ interface ExtendedWalletContextType extends WalletContextType {
 
 // Assuming the structure of the provider object
 interface Provider {
-    metadata: {
-        id: string;
-        // Add other properties as needed
-    };
-    setActiveAccount: (address: string) => void; // Adjust the type as necessary
+  metadata: {
+    id: string;
+    // Add other properties as needed
+  };
+  setActiveAccount: (address: string) => void; // Adjust the type as necessary
 }
 
 export const Swap: React.FC = () => {
@@ -276,14 +272,12 @@ export const Swap: React.FC = () => {
   const {
     wallets,
     activeAccount,
-    connectedAccounts,
-    providers,
     signTransactions,
-    sendTransactions,
-  } = useWallet() as WalletContextType;
+  } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
+  const { connectedAccounts, providers, sendTransactions } = useWallet();
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
@@ -374,13 +368,15 @@ export const Swap: React.FC = () => {
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
-    provider?.connect();
+    // providers is not available from useWallet
+    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
+    // provider?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
-    provider?.disconnect();
+    // providers is not available from useWallet
+    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
+    // provider?.disconnect();
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -494,9 +490,9 @@ export const Swap: React.FC = () => {
       );
 
       let customR;
-      for (const p1 of /*a_swap_execute pmt*/ [0, 50900]) {
-        for (const p2 of /*arc200_approve pmt*/ [0, 28100]) {
-          for (const p3 of /*arc72_approve pmt*/ [0, 28500]) {
+      for (const p1 of /*a_swap_execute pmt*/[0, 50900]) {
+        for (const p2 of /*arc200_approve pmt*/[0, 28100]) {
+          for (const p3 of /*arc72_approve pmt*/[0, 28500]) {
             const buildO = [];
             const transfers = [];
             // apply tokens towards collection minimum balance
@@ -571,10 +567,10 @@ export const Swap: React.FC = () => {
       );
 
       // Filter out any null values
-      const validTransactions = transactions.filter(txn => txn !== null);
+      const validTransactions = transactions.filter((txn: Uint8Array) => txn !== null);
 
       await toast.promise(
-        signTransactions(validTransactions).then(() => sendTransactions(validTransactions)),
+        signTransactions(validTransactions).then((signedTransactions) => sendTransactions(signedTransactions)),
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
@@ -735,7 +731,7 @@ export const Swap: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account: any, i) => {
+                    {connectedAccounts.map((account: any, i: number) => {
                       return (
                         <li
                           style={{
@@ -756,20 +752,20 @@ export const Swap: React.FC = () => {
                             <div>
                               {activeAccount.address ===
                                 account.providerId &&
-                              activeAccount.address ===
+                                activeAccount.address ===
                                 account.address ? null : (
-                                <button
-                                  onClick={() => {
-                                    const provider = providers?.find(
-                                      (el: Provider) =>
-                                        el.metadata.id === account.providerId
-                                    );
-                                    provider?.setActiveAccount(account.address);
-                                  }}
-                                >
-                                  Connect
-                                </button>
-                              )}
+                                  <button
+                                    onClick={() => {
+                                      const provider = providers?.find(
+                                        (el: any) =>
+                                          el.metadata.id === el.providerId
+                                      );
+                                      provider?.setActiveAccount(account.address);
+                                    }}
+                                  >
+                                    Connect
+                                  </button>
+                                )}
                             </div>
                           </Stack>
                         </li>

@@ -16,6 +16,7 @@ import {
   TableRow,
   TextField,
   Popper,
+  Switch,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -37,7 +38,7 @@ import { getListings } from "../../store/listingSlice";
 import { getRankings } from "../../utils/mp";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useWallet, useNetwork, NetworkId } from "@txnlab/use-wallet-react";
 import { Button as MButton } from "@mui/material";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -249,9 +250,10 @@ export const Home: React.FC = () => {
   const {
     activeAccount,
     signTransactions,
-    transactionSigner,
+    transactionSigner, setAlgodClient,
     activeWalletAccounts, wallets
   } = useWallet();
+  const { setActiveNetwork,activeNetwork } = useNetwork()
 
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
@@ -259,7 +261,11 @@ export const Home: React.FC = () => {
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
+  const [isMainnet, setIsMainnet] = useState<boolean>(true);
 
+  const switchNetwork = () => {
+
+  }
   useEffect(() => {
     if (!activeAccount) return;
     const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${activeAccount.address}`;
@@ -480,10 +486,10 @@ export const Home: React.FC = () => {
       if (!customR.success) throw new Error(customR.error);
       await toast.promise(
         signTransactions(
-          customR.txns.map(
-            (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-          )
-        ).then(signTransactions),
+          customR.txns
+            .map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
+            .filter((txn:any) => txn !== null)
+        ),
         {
           pending: "Pending transaction to create swap",
           success: "Swap created successfully",
@@ -581,6 +587,11 @@ export const Home: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
+  const handleNetworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsMainnet(activeNetwork !==NetworkId.MAINNET);
+    setActiveNetwork(activeNetwork !==NetworkId.MAINNET? NetworkId.MAINNET : NetworkId.TESTNET);
+  };
+
   const isLoading = false;
   return !isLoading ? (
     <Layout>
@@ -645,6 +656,16 @@ export const Home: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                      <label style={{ marginRight: "10px", color: "#000" }}>Network:</label>
+                      <Switch
+                        checked={activeNetwork==NetworkId.MAINNET}
+                        onChange={handleNetworkChange}
+                        color="primary"
+                        inputProps={{ 'aria-label': 'controlled' }}
+                      />
+                      <span style={{ color: "#000" }}>{isMainnet ? "Mainnet" : "Testnet"}</span>
+                    </div>
                     {wallets && // Conditional Check
                       wallets?.map((account, i) => {
                         return (
@@ -660,20 +681,37 @@ export const Home: React.FC = () => {
                               gap={2}
                               sx={{ justifyContent: "space-between" }}
                             >
-                              <div>
-                                {account.activeAccount?.address.slice(0, 4)}...
-                                {account.activeAccount?.address.slice(-4)}
+                              <div className="flex gap-2 ">
+                                {account?.isConnected ? `${account.activeAccount?.address.slice(0, 4)}...
+                                ${account.activeAccount?.address.slice(-4)}` : <div className="">
+                                  <img className="rounded-full" width={20} height={20} src={account?.metadata?.icon} /> {account?.metadata?.name}
+                                </div>}
                               </div>
                               <div>
                                 {account?.isConnected ? null : (
                                   <button
                                     onClick={() => {
-                                      account?.connect()
+                                      account?.connect().catch((err) => {
+                                        console.log({ err })
+                                        toast.error("Failed to connect wallet")
+                                      })
                                     }}
                                   >
                                     Connect
                                   </button>
                                 )}
+                                {account?.isConnected ? (
+                                  <button
+                                    onClick={() => {
+                                      account?.disconnect().catch((err) => {
+                                        console.log({ err });
+                                        toast.error("Failed to disconnect wallet");
+                                      });
+                                    }}
+                                  >
+                                    Disconnect
+                                  </button>
+                                ) : null}
                               </div>
                             </Stack>
                           </li>
@@ -713,7 +751,7 @@ export const Home: React.FC = () => {
                 </div>
               </Stack>
 
-{/* THE RECYCLE ICON FOR THE WALLET */}
+              {/* THE RECYCLE ICON FOR THE WALLET */}
               <img
                 src={RecycleIcon}
                 style={{ height: "45px", cursor: "pointer", zIndex: 100 }}

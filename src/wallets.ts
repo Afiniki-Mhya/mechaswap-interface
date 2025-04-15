@@ -1,4 +1,4 @@
-import { WalletId, WalletManager, NetworkId } from "@txnlab/use-wallet-react";
+import { WalletId, WalletManager, NetworkId, LogLevel } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 
 const getDynamicDeflyWalletConnect = async () => {
@@ -42,7 +42,12 @@ export const getProviderInit = () => {
         },
         { id: WalletId.KIBISIS }
       ],
-      defaultNetwork: NetworkId.TESTNET
+      defaultNetwork: NetworkId.TESTNET,
+      // options: {
+      //   debug: true,
+      //   logLevel: LogLevel.INFO,
+      //   resetNetwork: false
+      // }
       // networks: [{algod:
       //   // id: "voi-testnet",
       //   // nodeServer: "https://testnet-api.voi.nodly.io",
