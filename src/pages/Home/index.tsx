@@ -712,6 +712,8 @@ export const Home: React.FC = () => {
                   ...{activeAccount?.address?.slice(-6)}
                 </div>
               </Stack>
+
+{/* THE RECYCLE ICON FOR THE WALLET */}
               <img
                 src={RecycleIcon}
                 style={{ height: "45px", cursor: "pointer", zIndex: 100 }}

@@ -1,8 +1,4 @@
-import {
-  WalletId,
-  WalletManager,
-  NetworkId
-} from "@txnlab/use-wallet-react";
+import { WalletId, WalletManager, NetworkId } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 
 const getDynamicDeflyWalletConnect = async () => {
@@ -75,6 +71,11 @@ export const getCurrentNodeEnv = () => {
   let ALGO_INDEXER_SERVER;
   switch (node) {
     default:
+    case "voi":
+    case "voi-mainnet":
+      ALGO_SERVER = "https://mainnet-api.voi.nodly.io";
+      ALGO_INDEXER_SERVER = "https://mainnet-idx.voi.nodly.io";
+      break;
     case "voi":
     case "voi-testnet":
       ALGO_SERVER = "https://testnet-api.voi.nodly.io";
