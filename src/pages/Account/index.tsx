@@ -106,10 +106,11 @@ export const Account: React.FC = () => {
 
   /* Wallet */
   const {
-    activeAccount,
-    activeWalletAccounts,
+
+    activeAccount,activeWalletAccounts,
+  
     signTransactions,
-    activeWallet
+
   } = useWallet();
 
   /* Copy to clipboard */

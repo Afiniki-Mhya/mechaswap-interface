@@ -16,6 +16,7 @@ import {
   TableRow,
   TextField,
   Popper,
+  Switch,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -37,7 +38,7 @@ import { getListings } from "../../store/listingSlice";
 import { getRankings } from "../../utils/mp";
 import { CONTRACT, abi } from "ulujs";
 import { getAlgorandClients } from "../../wallets";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useWallet, useNetwork, NetworkId } from "@txnlab/use-wallet-react";
 import { Button as MButton } from "@mui/material";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -48,7 +49,6 @@ import BigNumber from "bignumber.js";
 import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
-import NetworkSelector from "../Network/page";
 import WalletModal from "../Network/page";
 
 const ActivityFilterContainer = styled.div`
@@ -251,16 +251,25 @@ export const Home: React.FC = () => {
 
   const {
     activeAccount,
-    wallets,
-    signTransactions: signer,
+
+    signTransactions,
+    transactionSigner, setAlgodClient,
+    activeWalletAccounts, wallets
+
   } = useWallet();
+  const { setActiveNetwork,activeNetwork } = useNetwork()
+
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
+  const [isMainnet, setIsMainnet] = useState<boolean>(true);
 
+  const switchNetwork = () => {
+
+  }
   useEffect(() => {
     if (!activeAccount) return;
     const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${activeAccount.address}`;
@@ -276,14 +285,16 @@ export const Home: React.FC = () => {
     });
   }, [owner]);
   const handleWalletIconClick = () => {
-    if (activeAccount) return;
-    const wallet = wallets?.find((el) => el.id === "kibisis");
-    wallet?.connect();
+
+    if (activeAccount) wallets;
+    const provider = wallets?.find((el) => el?.metadata?.name === "kibisis");
+    provider?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const wallet = wallets?.find((el) => el.id === "kibisis");
-    wallet?.disconnect();
+    const provider = wallets?.find((el) => el.metadata?.name === "kibisis");
+    provider?.disconnect();
+
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -480,20 +491,13 @@ export const Home: React.FC = () => {
       }
       if (!customR.success) throw new Error(customR.error);
       await toast.promise(
-        (async () => {
-          const signedTxns = await signer(
-            customR.txns.map(
-              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-            )
-          );
 
-          // Send the signed transactions
-          const { algodClient } = getAlgorandClients();
-          const txnResponse = await algodClient.sendRawTransaction(
-            signedTxns.filter(Boolean) as Uint8Array[]
-          ).do();
-          return txnResponse;
-        })(),
+        signTransactions(
+          customR.txns
+            .map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
+            .filter((txn:any) => txn !== null)
+        ),
+
         {
           pending: "Pending transaction to create swap",
           success: "Swap created successfully",
@@ -591,6 +595,11 @@ export const Home: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
+  const handleNetworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIsMainnet(activeNetwork !==NetworkId.MAINNET);
+    setActiveNetwork(activeNetwork !==NetworkId.MAINNET? NetworkId.MAINNET : NetworkId.TESTNET);
+  };
+
   const isLoading = false;
   return !isLoading ? (
     <Layout>
@@ -609,16 +618,12 @@ export const Home: React.FC = () => {
             padding: "10px",
             display: "flex",
             justifyContent: "start",
-            gap: "10px",
+            gap: "12px",
           }}
         >
           {!activeAccount ? (
 
             <WalletModal />
-
-
-
-
 
           ) : (
             <div
@@ -661,45 +666,69 @@ export const Home: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {wallets.flatMap(wallet =>
-                      wallet.accounts.map(account => ({ ...account, walletId: wallet.id }))
-                    ).map((account, i) => {
-                      return (
-                        <li
-                          style={{
-                            listStyleType: "none",
-                            height: "30px",
-                          }}
-                          key={i}
-                        >
-                          <Stack
-                            direction="row"
-                            gap={2}
-                            sx={{ justifyContent: "space-between" }}
+
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                      <label style={{ marginRight: "10px", color: "#000" }}>Network:</label>
+                      <Switch
+                        checked={activeNetwork==NetworkId.MAINNET}
+                        onChange={handleNetworkChange}
+                        color="primary"
+                        inputProps={{ 'aria-label': 'controlled' }}
+                      />
+                      <span style={{ color: "#000" }}>{isMainnet ? "Mainnet" : "Testnet"}</span>
+                    </div>
+                    {wallets && // Conditional Check
+                      wallets?.map((account, i) => {
+                        return (
+                          <li
+                            style={{
+                              listStyleType: "none",
+                              height: "30px",
+                            }}
+                            key={i}
                           >
-                            <div>
-                              {account.address.slice(0, 4)}...
-                              {account.address.slice(-4)}
-                            </div>
-                            <div>
-                              {activeAccount.address === account.address ? null : (
-                                <button
-                                  onClick={() => {
-                                    const wallet = wallets?.find(
-                                      (el: any) =>
-                                        el.id === account.walletId
-                                    );
-                                    wallet?.setActiveAccount(account.address);
-                                  }}
-                                >
-                                  Connect
-                                </button>
-                              )}
-                            </div>
-                          </Stack>
-                        </li>
-                      );
-                    })}
+                            <Stack
+                              direction="row"
+                              gap={2}
+                              sx={{ justifyContent: "space-between" }}
+                            >
+                              <div className="flex gap-2 ">
+                                {account?.isConnected ? `${account.activeAccount?.address.slice(0, 4)}...
+                                ${account.activeAccount?.address.slice(-4)}` : <div className="">
+                                  <img className="rounded-full" width={20} height={20} src={account?.metadata?.icon} /> {account?.metadata?.name}
+                                </div>}
+                              </div>
+                              <div>
+                                {account?.isConnected ? null : (
+                                  <button
+                                    onClick={() => {
+                                      account?.connect().catch((err) => {
+                                        console.log({ err })
+                                        toast.error("Failed to connect wallet")
+                                      })
+                                    }}
+                                  >
+                                    Connect
+                                  </button>
+                                )}
+                                {account?.isConnected ? (
+                                  <button
+                                    onClick={() => {
+                                      account?.disconnect().catch((err) => {
+                                        console.log({ err });
+                                        toast.error("Failed to disconnect wallet");
+                                      });
+                                    }}
+                                  >
+                                    Disconnect
+                                  </button>
+                                ) : null}
+                              </div>
+                            </Stack>
+                          </li>
+                        );
+                      })}
+
                   </ul>
                 </Box>
               </Popper>
@@ -733,6 +762,8 @@ export const Home: React.FC = () => {
                   ...{activeAccount?.address?.slice(-6)}
                 </div>
               </Stack>
+
+              {/* THE RECYCLE ICON FOR THE WALLET */}
               <img
                 src={RecycleIcon}
                 style={{ height: "45px", cursor: "pointer", zIndex: 100 }}

@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import { Box, Button, Dialog, DialogContent, DialogTitle, IconButton, Typography, Stack, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import WalletIcon from "static/icon-wallet.svg";
 import CloseIcon from "@mui/icons-material/Close";
 
-// Assuming WalletId is defined somewhere in your types
 type WalletId = 'kibisis' | 'pera' | 'myalgo' | 'defly' | 'exodus' | 'walletconnect';
 
 const WalletModal: React.FC = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { activeAccount, wallets } = useWallet();
+
+  const { activeAccount, wallets, connect } = useWallet(); 
+
   const [selectedNetwork, setSelectedNetwork] = useState("voi-mainnet");
 
   const handleOpen = () => {
@@ -27,7 +29,9 @@ const WalletModal: React.FC = () => {
     handleClose();
   };
 
-  const handleConnectWallet = (wallet: any, address: string) => {
+
+  const handleConnectWalletAccount = (wallet: any, address: string) => {
+
     wallet.setActiveAccount(address);
     handleClose();
   };
@@ -37,6 +41,7 @@ const WalletModal: React.FC = () => {
     console.log("Selected Network:", event.target.value);
   };
 
+
   const walletOptions: Record<WalletId, string> = {
     'kibisis': 'Kibisis',
     'pera': 'Pera Wallet',
@@ -45,6 +50,18 @@ const WalletModal: React.FC = () => {
     'exodus': 'Exodus',
     'walletconnect': 'WalletConnect',
   };
+
+console.log({wallets})
+  const handleConnectWallet = async (walletId: string) => {
+    try {
+      await connect(walletId);
+      handleClose(); // Close modal after successful connection
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      // Handle the error (e.g., display an error message)
+    }
+  };
+
 
   return (
     <>
@@ -107,16 +124,13 @@ const WalletModal: React.FC = () => {
           </FormControl>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-            {Object.entries(walletOptions).map(([walletId, walletName]) => (
+
+            {wallets?.map(({connect,id,metadata}) => (
               <Button
-                key={walletId}
+                key={id}
                 variant="outlined"
-                onClick={() => {
-                  // Implement functionality here.
-                  // for example, to initiate the connection
-                  // to the specific wallet.
-                  console.log(`Connect to ${walletName} (${walletId})`);
-                }}
+                onClick={connect} // Use the connect function
+
                 sx={{
                   color: "#FFD54F",
                   borderColor: "#FFD54F",
@@ -126,10 +140,30 @@ const WalletModal: React.FC = () => {
                   }
                 }}
               >
-                {walletName}
+
+                {id}
+
               </Button>
             ))}
           </Box>
+
+
+          {/* <Button
+            fullWidth
+            variant="contained"
+            onClick={handleNavigateToWallet}
+            sx={{
+              backgroundColor: "#93f",
+              borderRadius: "15px",
+              color: "white",
+              marginBottom: "20px",
+              "&:hover": {
+                backgroundColor: "#7b2cbf",
+              }
+            }}
+          >
+            Go to Wallet Page
+          </Button> */}
 
 
           {wallets && wallets.length > 0 && (
@@ -165,7 +199,9 @@ const WalletModal: React.FC = () => {
                         <Button
                           variant="outlined"
                           size="small"
-                          onClick={() => handleConnectWallet(wallet, account.address)}
+
+                          onClick={() =>wallet?.connect()}
+
                           sx={{ 
                             color: "#FFD54F", 
                             borderColor: "#FFD54F",

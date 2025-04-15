@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import Layout from "../../layouts/Default";
 import {
   AppBar,
@@ -229,6 +229,40 @@ function shuffleArray<T>(array: T[]): T[] {
 
 const mp212 = 40433943;
 
+// Define the structure of the wallet object
+interface Wallet {
+  id: string;
+  metadata: {
+    name: string;
+    // Add other properties as needed
+  };
+  accounts: Array<{
+    address: string;
+    // Add other properties as needed
+  }>;
+}
+
+// Define your own WalletContextType based on the expected structure
+interface WalletContextType {
+  wallets: Wallet[]; // Include wallets
+  activeAccount: any; // Adjust the type as necessary
+  signTransactions: (transactions: any[]) => Promise<void>; // Adjust types as necessary
+}
+
+// Extend the WalletContextType to include connectedAccounts, wallets, activeAccount, providers, isReady, signTransactions, and sendTransactions
+interface ExtendedWalletContextType extends WalletContextType {
+  // Add any additional properties if needed
+}
+
+// Assuming the structure of the provider object
+interface Provider {
+  metadata: {
+    id: string;
+    // Add other properties as needed
+  };
+  setActiveAccount: (address: string) => void; // Adjust the type as necessary
+}
+
 export const Swap: React.FC = () => {
   const { id: swapIdStr } = useParams();
   const swapId = parseInt(swapIdStr || "0");
@@ -236,13 +270,16 @@ export const Swap: React.FC = () => {
   const [copiedText, copy] = useCopyToClipboard();
 
   const {
-    activeAccount,
     wallets,
-    signTransactions: signer,
+    activeAccount,
+
+    signTransactions,
+
   } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
+  const { connectedAccounts, providers, sendTransactions } = useWallet();
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
@@ -333,13 +370,17 @@ export const Swap: React.FC = () => {
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    const wallet = wallets?.find((el) => el.id === "kibisis");
-    wallet?.connect();
+
+    // providers is not available from useWallet
+    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
+    // provider?.connect();
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    const wallet = wallets?.find((el) => el.id === "kibisis");
-    wallet?.disconnect();
+    // providers is not available from useWallet
+    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
+    // provider?.disconnect();
+
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -453,9 +494,9 @@ export const Swap: React.FC = () => {
       );
 
       let customR;
-      for (const p1 of /*a_swap_execute pmt*/ [0, 50900]) {
-        for (const p2 of /*arc200_approve pmt*/ [0, 28100]) {
-          for (const p3 of /*arc72_approve pmt*/ [0, 28500]) {
+      for (const p1 of /*a_swap_execute pmt*/[0, 50900]) {
+        for (const p2 of /*arc200_approve pmt*/[0, 28100]) {
+          for (const p3 of /*arc72_approve pmt*/[0, 28500]) {
             const buildO = [];
             const transfers = [];
             // apply tokens towards collection minimum balance
@@ -525,24 +566,21 @@ export const Swap: React.FC = () => {
 
       if (!customR.success) throw new Error("Failed to execute swap");
 
+      const transactions = customR.txns.map(
+        (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+      );
+
+      // Filter out any null values
+      const validTransactions = transactions.filter((txn: Uint8Array) => txn !== null);
+
       await toast.promise(
-        (async () => {
-          const signedTxns = await signer(
-            customR.txns.map(
-              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-            )
-          );
-          
-          // Send the signed transactions
-          const { algodClient } = getAlgorandClients();
-          const txnResponse = await algodClient.sendRawTransaction(
-            signedTxns.filter(Boolean) as Uint8Array[]
-          ).do();
-          return txnResponse;
-        })(),
+
+        signTransactions(validTransactions).then((signedTransactions) => sendTransactions(signedTransactions)),
+
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
+          error: "Swap execution failed",
         }
       );
 
@@ -618,12 +656,14 @@ export const Swap: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
-  const handleCopy = (text: string) => () => {
+
+  const handleCopy = (text: string) => {
     copy(text)
       .then(() => {
-        toast.success("Copied sharable link!");
+        toast.success("Copied to clipboard!");
       })
-      .catch((error: any) => {
+      .catch((error) => {
+
         toast.error("Failed to copy!");
       });
   };
@@ -699,9 +739,9 @@ export const Swap: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
-                    {wallets.flatMap(wallet => 
-                      wallet.accounts.map(account => ({...account, walletId: wallet.id}))
-                    ).map((account, i) => {
+
+                    {connectedAccounts.map((account: any, i: number) => {
+
                       return (
                         <li
                           style={{
@@ -720,18 +760,24 @@ export const Swap: React.FC = () => {
                               {account.address.slice(-4)}
                             </div>
                             <div>
-                              {activeAccount.address === account.address ? null : (
-                                <button
-                                  onClick={() => {
-                                    const wallet = wallets?.find(
-                                      (el: any) => el.id === account.walletId
-                                    );
-                                    wallet?.setActiveAccount(account.address);
-                                  }}
-                                >
-                                  Connect
-                                </button>
-                              )}
+
+                              {activeAccount.address ===
+                                account.providerId &&
+                                activeAccount.address ===
+                                account.address ? null : (
+                                  <button
+                                    onClick={() => {
+                                      const provider = providers?.find(
+                                        (el: any) =>
+                                          el.metadata.id === el.providerId
+                                      );
+                                      provider?.setActiveAccount(account.address);
+                                    }}
+                                  >
+                                    Connect
+                                  </button>
+                                )}
+
                             </div>
                           </Stack>
                         </li>
@@ -949,9 +995,7 @@ export const Swap: React.FC = () => {
               isValid ? (
                 selectedToken.owner === activeAccount?.address || "" ? (
                   <Button
-                    onClick={handleCopy(
-                      `https://mechaswap.nautilus.sh/#/swap/${swapId}`
-                    )}
+                    onClick={() => handleCopy(`https://mechaswap.nautilus.sh/#/swap/${swapId}`)}
                     size="large"
                     sx={{ borderRadius: "30px" }}
                     variant="contained"
