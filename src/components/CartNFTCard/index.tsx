@@ -238,7 +238,11 @@ interface NFTCardProps {
 
 const CartNftCard: React.FC<NFTCardProps> = ({ listedNft: el }) => {
   const navigate = useNavigate();
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const {
+    activeAccount,
+    signTransactions: signer,
+    // ... other properties
+  } = useWallet();
   const [isBuying, setIsBuying] = React.useState(false);
   const [openBuyModal, setOpenBuyModal] = React.useState(false);
 
@@ -272,12 +276,14 @@ const CartNftCard: React.FC<NFTCardProps> = ({ listedNft: el }) => {
           suggestedParams: await algodClient.getTransactionParams().do(),
         });
         await toast.promise(
-          signTransactions([paymentTxn.toByte()]).then(sendTransactions),
+          (async () => {
+            const signedTxns = await signer([paymentTxn.toByte()]);
+            return await algodClient.sendRawTransaction(
+              signedTxns.filter(Boolean) as Uint8Array[]
+            ).do();
+          })(),
           {
-            pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
-            )} will prompt you to sign the transaction.`,
+            pending: `Transaction signature pending...`,
             success: "Transaction successful!",
             error: "Transaction failed",
           }
@@ -357,21 +363,14 @@ const CartNftCard: React.FC<NFTCardProps> = ({ listedNft: el }) => {
             throw new Error("Listing no longer available");
           }
 
-          await toast.promise(
-            signTransactions(
-              customR.txns.map(
-                (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-              )
-            ).then(sendTransactions),
-            {
-              pending: `Transaction signature pending... ${((str) =>
-                str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
-              )} will prompt you to sign the transaction.`,
-              success: "Transaction successful!",
-              error: "Transaction failed",
-            }
+          const signedTxns = await signer(
+            customR.txns.map(
+              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+            )
           );
+          await algodClient.sendRawTransaction(
+            signedTxns.filter(Boolean) as Uint8Array[]
+          ).do();
 
           break;
         }
@@ -425,21 +424,14 @@ const CartNftCard: React.FC<NFTCardProps> = ({ listedNft: el }) => {
               throw new Error("Failed to approve spender");
             }
 
-            await toast.promise(
-              signTransactions(
-                arc200_approveR.txns.map(
-                  (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-                )
-              ).then(sendTransactions),
-              {
-                pending: `Transaction signature pending... ${((str) =>
-                  str[0].toUpperCase() + str.slice(1))(
-                  activeAccount.providerId
-                )} will prompt you to sign the transaction.`,
-                success: "Transaction successful!",
-                error: "Transaction failed",
-              }
+            const signedTxns = await signer(
+              arc200_approveR.txns.map(
+                (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+              )
             );
+            await algodClient.sendRawTransaction(
+              signedTxns.filter(Boolean) as Uint8Array[]
+            ).do();
 
             // -----------------------------------------
           }
@@ -557,21 +549,14 @@ const CartNftCard: React.FC<NFTCardProps> = ({ listedNft: el }) => {
             throw new Error("Listing no longer available");
           }
 
-          await toast.promise(
-            signTransactions(
-              customR.txns.map(
-                (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
-              )
-            ).then(sendTransactions),
-            {
-              pending: `Transaction signature pending... ${((str) =>
-                str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
-              )} will prompt you to sign the transaction.`,
-              success: "Transaction successful!",
-              error: "Transaction failed",
-            }
+          const signedTxns = await signer(
+            customR.txns.map(
+              (txn: string) => new Uint8Array(Buffer.from(txn, "base64"))
+            )
           );
+          await algodClient.sendRawTransaction(
+            signedTxns.filter(Boolean) as Uint8Array[]
+          ).do();
 
           break;
         }

@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
+
 import { Box, Button, Dialog, DialogContent, DialogTitle, IconButton, Typography, Stack, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
 import WalletIcon from "static/icon-wallet.svg";
 import CloseIcon from "@mui/icons-material/Close";
 
-// Define the WalletId type
 type WalletId = 'kibisis' | 'pera' | 'myalgo' | 'defly' | 'exodus' | 'walletconnect';
 
 const WalletModal: React.FC = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
   const { activeAccount, wallets, connect } = useWallet(); 
+
   const [selectedNetwork, setSelectedNetwork] = useState("voi-mainnet");
 
   const handleOpen = () => {
@@ -27,7 +29,9 @@ const WalletModal: React.FC = () => {
     handleClose();
   };
 
+
   const handleConnectWalletAccount = (wallet: any, address: string) => {
+
     wallet.setActiveAccount(address);
     handleClose();
   };
@@ -37,7 +41,7 @@ const WalletModal: React.FC = () => {
     console.log("Selected Network:", event.target.value);
   };
 
-  // Type the walletOptions object
+
   const walletOptions: Record<WalletId, string> = {
     'kibisis': 'Kibisis',
     'pera': 'Pera Wallet',
@@ -46,6 +50,7 @@ const WalletModal: React.FC = () => {
     'exodus': 'Exodus',
     'walletconnect': 'WalletConnect',
   };
+
 console.log({wallets})
   const handleConnectWallet = async (walletId: string) => {
     try {
@@ -56,6 +61,7 @@ console.log({wallets})
       // Handle the error (e.g., display an error message)
     }
   };
+
 
   return (
     <>
@@ -118,11 +124,13 @@ console.log({wallets})
           </FormControl>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+
             {wallets?.map(({connect,id,metadata}) => (
               <Button
                 key={id}
                 variant="outlined"
                 onClick={connect} // Use the connect function
+
                 sx={{
                   color: "#FFD54F",
                   borderColor: "#FFD54F",
@@ -132,10 +140,13 @@ console.log({wallets})
                   }
                 }}
               >
+
                 {id}
+
               </Button>
             ))}
           </Box>
+
 
           {/* <Button
             fullWidth
@@ -153,6 +164,7 @@ console.log({wallets})
           >
             Go to Wallet Page
           </Button> */}
+
 
           {wallets && wallets.length > 0 && (
             <Box sx={{ mt: 2 }}>
@@ -187,7 +199,9 @@ console.log({wallets})
                         <Button
                           variant="outlined"
                           size="small"
+
                           onClick={() =>wallet?.connect()}
+
                           sx={{ 
                             color: "#FFD54F", 
                             borderColor: "#FFD54F",

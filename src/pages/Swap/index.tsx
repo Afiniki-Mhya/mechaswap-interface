@@ -272,7 +272,9 @@ export const Swap: React.FC = () => {
   const {
     wallets,
     activeAccount,
+
     signTransactions,
+
   } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
@@ -368,6 +370,7 @@ export const Swap: React.FC = () => {
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
+
     // providers is not available from useWallet
     // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
     // provider?.connect();
@@ -377,6 +380,7 @@ export const Swap: React.FC = () => {
     // providers is not available from useWallet
     // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
     // provider?.disconnect();
+
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -570,7 +574,9 @@ export const Swap: React.FC = () => {
       const validTransactions = transactions.filter((txn: Uint8Array) => txn !== null);
 
       await toast.promise(
+
         signTransactions(validTransactions).then((signedTransactions) => sendTransactions(signedTransactions)),
+
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
@@ -650,12 +656,14 @@ export const Swap: React.FC = () => {
     // -----------------------------------------
   }, [activeAccount]);
 
+
   const handleCopy = (text: string) => {
     copy(text)
       .then(() => {
         toast.success("Copied to clipboard!");
       })
       .catch((error) => {
+
         toast.error("Failed to copy!");
       });
   };
@@ -731,7 +739,9 @@ export const Swap: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
+
                     {connectedAccounts.map((account: any, i: number) => {
+
                       return (
                         <li
                           style={{
@@ -750,6 +760,7 @@ export const Swap: React.FC = () => {
                               {account.address.slice(-4)}
                             </div>
                             <div>
+
                               {activeAccount.address ===
                                 account.providerId &&
                                 activeAccount.address ===
@@ -766,6 +777,7 @@ export const Swap: React.FC = () => {
                                     Connect
                                   </button>
                                 )}
+
                             </div>
                           </Stack>
                         </li>

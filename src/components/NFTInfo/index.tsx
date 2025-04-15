@@ -267,7 +267,7 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
   exchangeRate,
 }) => {
   /* Wallet */
-  const { activeAccount, signTransactions, sendTransactions } = useWallet();
+  const { activeAccount, signTransactions, sendTransactions,activeWallet } = useWallet();
   /* Modal */
   const [openBuyModal, setOpenBuyModal] = React.useState(false);
   const [isBuying, setIsBuying] = React.useState(false);
@@ -787,7 +787,7 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
           {
             pending: `Transaction signature pending... ${((str) =>
               str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
+              activeAccount.address
             )} will prompt you to sign the transaction.`,
             success: "List successful!",
             error: "List failed",
@@ -834,8 +834,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
           signTransactions([paymentTxn.toByte()]).then(sendTransactions),
           {
             pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
+              str?.[0].toUpperCase() + str?.slice(1))(
+              activeWallet?.id
             )} will prompt you to sign the transaction.`,
             success: "Transaction successful!",
             error: "Transaction failed",
@@ -936,8 +936,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
             ).then(sendTransactions),
             {
               pending: `Transaction signature pending... ${((str) =>
-                str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
+                str?.[0]?.toUpperCase() + str?.slice(1))(
+                activeWallet?.id
               )} will prompt you to sign the transaction.`,
               success: "Transaction successful!",
               error: "Transaction failed",
@@ -1005,7 +1005,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
               {
                 pending: `Transaction signature pending... ${((str) =>
                   str[0].toUpperCase() + str.slice(1))(
-                  activeAccount.providerId
+                    activeWallet?.id
+
                 )} will prompt you to sign the transaction.`,
                 success: "Transaction successful!",
                 error: "Transaction failed",
@@ -1147,7 +1148,8 @@ export const NFTInfo: React.FC<NFTInfoProps> = ({
             {
               pending: `Transaction signature pending... ${((str) =>
                 str[0].toUpperCase() + str.slice(1))(
-                activeAccount.providerId
+                  activeWallet?.id
+
               )} will prompt you to sign the transaction.`,
               success: "Transaction successful!",
               error: "Transaction failed",

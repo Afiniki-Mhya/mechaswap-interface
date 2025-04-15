@@ -58,11 +58,14 @@ const WalletInitializer: React.FC<{children: React.ReactNode}> = ({ children }) 
 };
 
 const App: React.FC = () => {
+  // Create the wallet manager once
+  const walletManager = getProviderInit();
+  
   return (
-    <WalletProvider manager={getProviderInit()}>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <WalletInitializer>
+    <>
+      <WalletProvider manager={walletManager}>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
             <AppContainer>
               <Router>
                 {/*<Navbar />*/}
@@ -73,11 +76,11 @@ const App: React.FC = () => {
                 </Routes>
               </Router>
             </AppContainer>
-          </WalletInitializer>
-        </PersistGate>
-      </Provider>
+          </PersistGate>
+        </Provider>
+      </WalletProvider>
       <ToastContainer />
-    </WalletProvider>
+    </>
   );
 };
 

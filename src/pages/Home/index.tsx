@@ -247,11 +247,15 @@ const InterstitialBanner = () => {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  // const [isModalOpen, setIsModalOpen] = useState(false);
+
   const {
     activeAccount,
+
     signTransactions,
     transactionSigner, setAlgodClient,
     activeWalletAccounts, wallets
+
   } = useWallet();
   const { setActiveNetwork,activeNetwork } = useNetwork()
 
@@ -281,6 +285,7 @@ export const Home: React.FC = () => {
     });
   }, [owner]);
   const handleWalletIconClick = () => {
+
     if (activeAccount) wallets;
     const provider = wallets?.find((el) => el?.metadata?.name === "kibisis");
     provider?.connect();
@@ -289,6 +294,7 @@ export const Home: React.FC = () => {
     if (!activeAccount) return;
     const provider = wallets?.find((el) => el.metadata?.name === "kibisis");
     provider?.disconnect();
+
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -485,11 +491,13 @@ export const Home: React.FC = () => {
       }
       if (!customR.success) throw new Error(customR.error);
       await toast.promise(
+
         signTransactions(
           customR.txns
             .map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
             .filter((txn:any) => txn !== null)
         ),
+
         {
           pending: "Pending transaction to create swap",
           success: "Swap created successfully",
@@ -614,7 +622,9 @@ export const Home: React.FC = () => {
           }}
         >
           {!activeAccount ? (
+
             <WalletModal />
+
           ) : (
             <div
               style={{
@@ -629,7 +639,7 @@ export const Home: React.FC = () => {
                   cursor: "pointer",
                   zIndex: 100,
                 }}
-                src={WalletIcon}
+                src={""}
               />
               <Popper
                 id={id}
@@ -656,6 +666,7 @@ export const Home: React.FC = () => {
                       paddingLeft: 0,
                     }}
                   >
+
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
                       <label style={{ marginRight: "10px", color: "#000" }}>Network:</label>
                       <Switch
@@ -717,6 +728,7 @@ export const Home: React.FC = () => {
                           </li>
                         );
                       })}
+
                   </ul>
                 </Box>
               </Popper>
@@ -920,9 +932,13 @@ export const Home: React.FC = () => {
                 sx={{ borderRadius: "30px" }}
                 variant="contained"
               >
-                Create Swap
+                Create SWAP
               </Button>
             ) : null}
+
+
+            {/* NETWORK SELECTOR */}
+            {/* <NetworkSelector /> */}
           </Stack>
         </Container>
       </div>

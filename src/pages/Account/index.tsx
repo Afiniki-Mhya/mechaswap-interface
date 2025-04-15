@@ -106,9 +106,11 @@ export const Account: React.FC = () => {
 
   /* Wallet */
   const {
+
     activeAccount,activeWalletAccounts,
   
     signTransactions,
+
   } = useWallet();
 
   /* Copy to clipboard */
@@ -310,16 +312,16 @@ export const Account: React.FC = () => {
     });
   }, [nfts, selected]);
 
-  const handleListAuction = async (price: string, currency: string) => {};
+  const handleListAuction = async (price: string, currency: string) => { };
 
   const handleListSale = async (price: string, currency: string) => {
     const listedNft = nft?.listing
       ? nft
       : listedNfts.find(
-          (el: any) =>
-            el.contractId === nfts[selected].contractId &&
-            el.tokenId === nfts[selected].tokenId
-        );
+        (el: any) =>
+          el.contractId === nfts[selected].contractId &&
+          el.tokenId === nfts[selected].tokenId
+      );
     const priceN = Number(price);
     const currencyN = Number(currency);
     try {
@@ -557,11 +559,11 @@ export const Account: React.FC = () => {
             nft?.royalties?.creator2Points || 0, // CreatePoints1
             nft?.royalties?.creator3Points || 0, // CreatePoints1
             nft?.royalties?.creator1Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
             nft?.royalties?.creator2Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
             nft?.royalties?.creator3Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ" // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ" // CreatePoints1
           ),
           builder.arc72.arc72_approve(
             algosdk.getApplicationAddress(ctcInfoMp206), // Address
@@ -704,9 +706,8 @@ export const Account: React.FC = () => {
                 )
               ).then(signTransactions),
               {
-                pending: `Transaction signature pending setup recipient account (${
-                  i + 1
-                }/${uniqAddrs.length})`,
+                pending: `Transaction signature pending setup recipient account (${i + 1
+                  }/${uniqAddrs.length})`,
                 success: "Recipient account setup successful",
                 error: "Recipient account setup failed",
               }
@@ -728,11 +729,11 @@ export const Account: React.FC = () => {
             nft?.royalties?.creator2Points || 0, // CreatePoints1
             nft?.royalties?.creator3Points || 0, // CreatePoints1
             nft?.royalties?.creator1Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
             nft?.royalties?.creator2Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ", // CreatePoints1
             nft?.royalties?.creator3Address ||
-              "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ" // CreatePoints1
+            "G3MSA75OZEJTCCENOJDLDJK7UD7E2K5DNC7FVHCNOV7E3I4DTXTOWDUIFQ" // CreatePoints1
           ),
           builder.arc72.arc72_approve(
             algosdk.getApplicationAddress(ctcInfoMp206),
@@ -778,9 +779,10 @@ export const Account: React.FC = () => {
           ).then(signTransactions),
           {
             pending: `Transaction signature pending... ${((str) =>
-              str[0].toUpperCase() + str.slice(1))(
-              activeAccount.providerId
-            )} will prompt you to sign the transaction.`,
+              str?.[0]?.toUpperCase() + str?.slice(1))(
+                activeWallet?.id
+
+              )} will prompt you to sign the transaction.`,
             success: "List successful!",
             error: "List failed",
           }
@@ -1091,8 +1093,7 @@ export const Account: React.FC = () => {
                                   // check that available balance is greater than or equal to 0.1235
                                   if (availableBalance < 123500) {
                                     throw new Error(
-                                      `Insufficient balance (${
-                                        (availableBalance - 123500) / 1e6
+                                      `Insufficient balance (${(availableBalance - 123500) / 1e6
                                       } VOI). Please fund your account.`
                                     );
                                   }
@@ -1302,8 +1303,7 @@ export const Account: React.FC = () => {
                                   // check that available balance is greater than or equal to 0.1235
                                   if (availableBalance < 123500) {
                                     throw new Error(
-                                      `Insufficient balance (${
-                                        (availableBalance - 123500) / 1e6
+                                      `Insufficient balance (${(availableBalance - 123500) / 1e6
                                       } VOI). Please fund your account.`
                                     );
                                   }
