@@ -51,6 +51,7 @@ import RecycleIcon from "static/icon-recyclebin.svg";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 import WalletModal from "../Network/page";
 import { algodClient } from './algodClient';
+import { useWaitForAssetOptIn } from "../AssetOptIn";
 
 
 
@@ -273,6 +274,46 @@ export const Home: React.FC = () => {
   const voiId = 39977231;
   const mp212 = 8324600;
 
+  const [startRound, setStartRound] = useState<number | null>(null);
+  const [hasRequestedOptIn, setHasRequestedOptIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { optedIn, checking, timedOut } = useWaitForAssetOptIn({
+    algodClient,
+    address: activeAccount ? activeAccount!.address : "",
+    assetId: mp212,
+    startRound: startRound ?? 0,
+    enabled: !!startRound && !!activeAccount,
+  });
+
+  const handleOptIn = async () => {
+    console.log("optin in")
+    setError(null);
+    try {
+      const suggestedParams = await algodClient.getTransactionParams().do();
+
+      const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+        from: activeAccount ? activeAccount!.address : "",
+        to: activeAccount ? activeAccount!.address : "",
+        amount: 0,
+        assetIndex: mp212,
+        suggestedParams,
+      });
+
+      const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
+      const signed = await signTransactions([encodedTxn]);
+      const validSigned = signed.filter((txn): txn is Uint8Array => txn !== null);
+      await signTransactions(validSigned);
+
+      const status = await algodClient.status().do();
+      setStartRound(status['last-round']);
+      setHasRequestedOptIn(true);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to initiate opt-in');
+    }
+  };
+
   const switchNetwork = () => {
 
   }
@@ -317,8 +358,8 @@ export const Home: React.FC = () => {
       });
       const encodedTxn = algosdk.encodeUnsignedTransaction(optInTxn);
       const signedTxn = await signTransactions([encodedTxn]);
-      await signTransactions(signedTxn);
-      await fetchBalances(); // refresh state
+      await signTransactions(signedTxn!);
+      await fetchBalances(); 
       alert('Successfully opted in to Nautilus VOI');
     } catch (err) {
       console.error('Opt-in error:', err);
@@ -996,14 +1037,15 @@ export const Home: React.FC = () => {
           <p>Your VOI Balance: <strong>{voiBalance}</strong></p>
           <p>Your Nautilus VOI Balance: <strong>{mp212Balance}</strong></p>
 
-          {!hasOptedIn && (
+          
+      {activeAccount && !optedIn && (
             <button
-              onClick={optInToMp212}
-              disabled={loading}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white cursor-pointer rounded-xl hover:bg-blue-700"
-            >
-              {loading ? 'Opting in...' : 'Opt-in to Nautilus VOI'}
-            </button>
+            onClick={handleOptIn}
+            // disabled={checking}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
+          >
+            {checking ? 'Waiting for confirmation...' : 'Opt-In to Nautilus VOI'}
+          </button>
           )}
 
           {hasOptedIn && (
@@ -1037,4 +1079,4 @@ export const Home: React.FC = () => {
       ) : (
         <InterstitialBanner />
       );
-    };
+    }

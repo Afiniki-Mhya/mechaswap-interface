@@ -233,38 +233,36 @@ function shuffleArray<T>(array: T[]): T[] {
 const mp212 = 39977231;
 
 
-// Define the structure of the wallet object
+
 interface Wallet {
   id: string;
   metadata: {
     name: string;
-    // Add other properties as needed
+    
   };
   accounts: Array<{
     address: string;
-    // Add other properties as needed
+    
   }>;
 }
 
-// Define your own WalletContextType based on the expected structure
 interface WalletContextType {
-  wallets: Wallet[]; // Include wallets
-  activeAccount: any; // Adjust the type as necessary
-  signTransactions: (transactions: any[]) => Promise<void>; // Adjust types as necessary
+  wallets: Wallet[]; 
+  activeAccount: any; 
+  signTransactions: (transactions: any[]) => Promise<void>; 
 }
 
-// Extend the WalletContextType to include connectedAccounts, wallets, activeAccount, providers, isReady, signTransactions, and sendTransactions
+
 interface ExtendedWalletContextType extends WalletContextType {
-  // Add any additional properties if needed
+ 
 }
 
-// Assuming the structure of the provider object
 interface Provider {
   metadata: {
     id: string;
-    // Add other properties as needed
+    
   };
-  setActiveAccount: (address: string) => void; // Adjust the type as necessary
+  setActiveAccount: (address: string) => void; 
 }
 
 export const Swap: React.FC = () => {
@@ -276,12 +274,12 @@ export const Swap: React.FC = () => {
   const {
     wallets,
     activeAccount,
-    signTransactions,
+    signTransactions, activeWalletAccounts,
   } = useWallet();
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
-  const { connectedAccounts, providers, sendTransactions } = useContext(useWallet.Context);
+  // const { connectedAccounts, providers, sendTransactions } = useContext(.);
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
@@ -312,10 +310,10 @@ const [startRound, setStartRound] = useState<number | null>(null);
   
   const { optedIn, checking, timedOut } = useWaitForAssetOptIn({
     algodClient,
-    address: activeAddress!,
-    assetId: 1067497885, // mp212
+    address: activeAccount ? activeAccount!.address : "",
+    assetId: 39977231,
     startRound: startRound ?? 0,
-    enabled: !!startRound,
+    enabled: !!startRound && !!activeAccount,
   });
   
   useEffect(() => {
@@ -393,15 +391,11 @@ const [startRound, setStartRound] = useState<number | null>(null);
   }, [swapId, activeAccount]);
   const handleWalletIconClick = () => {
     if (activeAccount) return;
-    // providers is not available from useWallet
-    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
-    // provider?.connect();
+    
   };
   const handleRecycleIconClick = () => {
     if (!activeAccount) return;
-    // providers is not available from useWallet
-    // const provider = providers?.find((el: Provider) => el.metadata.id === "kibisis");
-    // provider?.disconnect();
+  
   };
   const handleSwapButtonClick = async () => {
     if (!activeAccount || !selectedToken || !selectedToken2) return;
@@ -595,7 +589,7 @@ const [startRound, setStartRound] = useState<number | null>(null);
       const validTransactions = transactions.filter((txn: Uint8Array) => txn !== null);
 
       await toast.promise(
-        signTransactions(validTransactions).then((signedTransactions) => sendTransactions(signedTransactions)),
+        signTransactions(validTransactions),
         {
           pending: "Pending transaction to execute swap",
           success: "Swap executed successfully",
@@ -617,10 +611,10 @@ const [startRound, setStartRound] = useState<number | null>(null);
           if (!completedAction) {
             await submitAction(action, address);
           }
-          // TODO notify quest completion here
+          
         }
       } while (0);
-      // -----------------------------------------
+     
     } catch (e: any) {
       setShowButton(true);
       console.log(e);
@@ -665,10 +659,10 @@ const [startRound, setStartRound] = useState<number | null>(null);
         if (!completedAction) {
           await submitAction(action, address);
         }
-        // TODO notify quest completion here
+       
       }
     })();
-    // -----------------------------------------
+   
   }, [activeAccount]);
 
   const handleCopy = (text: string) => {
@@ -752,7 +746,7 @@ const [startRound, setStartRound] = useState<number | null>(null);
                       paddingLeft: 0,
                     }}
                   >
-                    {connectedAccounts.map((account: any, i: number) => {
+                    {activeWalletAccounts?.map((account, i: number) => {
                       return (
                         <li
                           style={{
@@ -771,17 +765,11 @@ const [startRound, setStartRound] = useState<number | null>(null);
                               {account.address.slice(-4)}
                             </div>
                             <div>
-                              {activeAccount.address ===
-                                account.providerId &&
-                                activeAccount.address ===
-                                account.address ? null : (
+                              {!account ? null : (
                                   <button
                                     onClick={() => {
-                                      const provider = providers?.find(
-                                        (el: any) =>
-                                          el.metadata.id === el.providerId
-                                      );
-                                      provider?.setActiveAccount(account.address);
+                                      // account?.
+                                      // wallets?.find(res=>res?.)
                                     }}
                                   >
                                     Connect
