@@ -51,6 +51,8 @@ import RecycleIcon from "static/icon-recyclebin.svg";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useCopyToClipboard } from "usehooks-ts";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
+import { algodClient } from "../Home/algodClient";
+import { useWaitForAssetOptIn } from "../AssetOptIn";
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -227,7 +229,9 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffledArray;
 }
 
-const mp212 = 40433943;
+// MP ASA ID
+const mp212 = 39977231;
+
 
 // Define the structure of the wallet object
 interface Wallet {
@@ -277,22 +281,43 @@ export const Swap: React.FC = () => {
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any>();
-  const { connectedAccounts, providers, sendTransactions } = useWallet();
+  const { connectedAccounts, providers, sendTransactions } = useContext(useWallet.Context);
   const [owner, setOwner] = useState();
   const [tokens2, setTokens2] = useState<any[]>([]);
   const [selectedToken2, setSelectedToken2] = useState<any>();
   const [swap, setSwap] = useState<any>();
   const [lastRound, setLastRound] = useState(0);
+  // useEffect(() => {
+  //   const { algodClient } = getAlgorandClients();
+  //   algodClient
+  //     .status()
+  //     .do()
+  //     .then((r: any) => {
+  //       const lastRound = r["last-round"];
+  //       setLastRound(lastRound);
+  //     });
+  // }, []);
+
+
+const { algodClient } = getAlgorandClients();
+const { activeAddress } = useWallet();
+const [startRound, setStartRound] = useState<number | null>(null);
   useEffect(() => {
-    const { algodClient } = getAlgorandClients();
-    algodClient
-      .status()
-      .do()
-      .then((r: any) => {
-        const lastRound = r["last-round"];
-        setLastRound(lastRound);
+    if (!startRound && activeAddress) {
+      algodClient.status().do().then((r) => {
+        setStartRound(r['last-round']);
       });
-  }, []);
+    }
+  }, [activeAddress, startRound]);
+  
+  const { optedIn, checking, timedOut } = useWaitForAssetOptIn({
+    algodClient,
+    address: activeAddress!,
+    assetId: 1067497885, // mp212
+    startRound: startRound ?? 0,
+    enabled: !!startRound,
+  });
+  
   useEffect(() => {
     if (!swap) return;
     const { contractId, tokenId } = swap;
@@ -414,7 +439,7 @@ export const Swap: React.FC = () => {
         ],
         events: [],
       };
-      const VIA = 6779767;
+      const VIA = 8324600;
       const ci = new CONTRACT(VIA, algodClient, indexerClient, customABI, {
         addr: activeAccount.address,
         sk: new Uint8Array(0),
@@ -578,9 +603,7 @@ export const Swap: React.FC = () => {
         }
       );
 
-      // -----------------------------------------
-      // QUEST HERE swap_list_once
-      // -----------------------------------------
+    
       do {
         const address = activeAccount.address;
         const actions: string[] = [QUEST_ACTION.SWAP_EXECUTE_ONCE];
@@ -628,9 +651,7 @@ export const Swap: React.FC = () => {
 
   React.useEffect(() => {
     if (!activeAccount) return;
-    // -----------------------------------------
-    // QUEST HERE hmbl_pool_swap
-    // -----------------------------------------
+   
     const address = activeAccount.address;
     const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
     (async () => {

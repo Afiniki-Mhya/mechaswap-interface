@@ -50,6 +50,9 @@ import WalletIcon from "static/icon-wallet.svg";
 import RecycleIcon from "static/icon-recyclebin.svg";
 import { QUEST_ACTION, getActions, submitAction } from "../../config/quest";
 import WalletModal from "../Network/page";
+import { algodClient } from './algodClient';
+
+
 
 const ActivityFilterContainer = styled.div`
   display: flex;
@@ -253,7 +256,7 @@ export const Home: React.FC = () => {
     transactionSigner, setAlgodClient,
     activeWalletAccounts, wallets
   } = useWallet();
-  const { setActiveNetwork,activeNetwork } = useNetwork()
+  const { setActiveNetwork, activeNetwork } = useNetwork()
 
   const [showButton, setShowButton] = useState<boolean>(true);
   const [tokens, setTokens] = useState<any[]>([]);
@@ -263,671 +266,775 @@ export const Home: React.FC = () => {
   const [selectedToken2, setSelectedToken2] = useState<any>();
   const [isMainnet, setIsMainnet] = useState<boolean>(true);
 
+  const [voiBalance, setVoiBalance] = useState(0);
+  const [mp212Balance, setMp212Balance] = useState(0);
+  const [hasOptedIn, setHasOptedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const voiId = 39977231;
+  const mp212 = 8324600;
+
   const switchNetwork = () => {
 
   }
   useEffect(() => {
-    if (!activeAccount) return;
-    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${activeAccount.address}`;
-    axios.get(url).then(({ data }) => {
-      setTokens(data.tokens);
-    });
+    //   if (!activeAccount) return;
+    //   const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${activeAccount.address}`;
+    //   axios.get(url).then(({ data }) => {
+    //     setTokens(data.tokens);
+    //   });
+    // }, [activeAccount]);
+    if (activeAccount) fetchBalances();
   }, [activeAccount]);
-  useEffect(() => {
-    if (!owner) return;
-    const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${owner}`;
-    axios.get(url).then(({ data }) => {
-      setTokens2(data.tokens);
-    });
-  }, [owner]);
-  const handleWalletIconClick = () => {
-    if (activeAccount) wallets;
-    const provider = wallets?.find((el) => el?.metadata?.name === "kibisis");
-    provider?.connect();
-  };
-  const handleRecycleIconClick = () => {
-    if (!activeAccount) return;
-    const provider = wallets?.find((el) => el.metadata?.name === "kibisis");
-    provider?.disconnect();
-  };
-  const handleSwapButtonClick = async () => {
-    if (!activeAccount || !selectedToken || !selectedToken2) return;
-    setShowButton(false);
+
+
+  const fetchBalances = async () => {
     try {
-      const mp212 = 40433943;
-      const { algodClient, indexerClient } = getAlgorandClients();
-      const status = await algodClient.status().do();
-      const lastRound = status["last-round"];
-      // TO get current block
-      const customABI = {
-        name: "",
-        desc: "",
-        methods: [
-          // custom()void
-          {
-            name: "custom",
-            args: [],
-            returns: {
-              type: "void",
-            },
-          },
-          // a_swap_list(uint64,uint256,uint64,uint256,uint64)uint256
-          {
-            name: "a_swap_list",
-            args: [
-              {
-                type: "uint64",
-                name: "contractId",
-              },
-              {
-                type: "uint256",
-                name: "tokenId",
-              },
-              {
-                type: "uint64",
-                name: "collectionId2",
-              },
-              {
-                type: "uint256",
-                name: "tokenId2",
-              },
-              {
-                type: "uint64",
-                name: "endTime",
-              },
-            ],
-            returns: {
-              type: "uint256",
-            },
-          },
-        ],
-        events: [
-          {
-            name: "e_swap_ListEvent",
-            args: [
-              {
-                type: "uint256",
-                name: "listingId",
-              },
-              {
-                type: "uint64",
-                name: "contractId",
-              },
-              {
-                type: "uint256",
-                name: "tokenId",
-              },
-              {
-                type: "uint64",
-                name: "contractId2",
-              },
-              {
-                type: "uint256",
-                name: "tokenId2",
-              },
-              {
-                type: "uint64",
-                name: "endTime",
-              },
-            ],
-          },
-        ],
-      };
-      const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
-        addr: activeAccount.address,
-        sk: new Uint8Array(0),
-      });
-      const builder = {
-        mp212: new CONTRACT(
-          mp212,
-          algodClient,
-          indexerClient,
-          customABI,
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
-          },
-          true,
-          false,
-          true
-        ),
-        arc722: new CONTRACT(
-          selectedToken2.contractId,
-          algodClient,
-          indexerClient,
-          abi.arc72,
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
-          },
-          true,
-          false,
-          true
-        ),
-        arc72: new CONTRACT(
-          selectedToken.contractId,
-          algodClient,
-          indexerClient,
-          abi.arc72,
-          {
-            addr: activeAccount.address,
-            sk: new Uint8Array(0),
-          },
-          true,
-          false,
-          true
-        ),
-      };
+      const accountInfo = await algodClient.accountInformation(activeAccount!).do();
+      const assets = accountInfo.assets;
 
-      const tokAddr = algosdk.getApplicationAddress(selectedToken.contractId);
-      const tokAddr2 = algosdk.getApplicationAddress(selectedToken2.contractId);
+      const voi = assets.find((a: any) => a['asset-id'] === voiId);
+      const mp212 = assets.find((a: any) => a['asset-id'] === mp212);
 
-      const accountInfo = await algodClient.accountInformation(tokAddr).do();
-      const accountInfo2 = await algodClient.accountInformation(tokAddr2).do();
-
-      // I am guessing that sometimes the collection app address is below the min balance which prevents operations like transfers
-      //   If available below zero provide the difference
-
-      const [p4, p5] = [accountInfo, accountInfo2].map((accInfo) =>
-        accountInfo.amount >= accountInfo["min-balance"]
-          ? 0
-          : Math.abs(accountInfo.amount - accountInfo["min-balance"])
-      );
-
-      let customR;
-      for (const p1 of /*arc72 approve pmt*/[0, 28500]) {
-        const buildO = [];
-        const transfers = [];
-        // apply tokens towards collection minimum balance
-        if (p4 > 0) {
-          transfers.push([p4, tokAddr]);
-        }
-        // apply tokens towards collection minimum balance
-        if (p5 > 0) {
-          transfers.push([p5, tokAddr2]);
-        }
-        do {
-          const { obj } = await builder.mp212.a_swap_list(
-            selectedToken.contractId,
-            selectedToken.tokenId,
-            selectedToken2.contractId,
-            selectedToken2.tokenId,
-            lastRound + 1000
-          );
-          const txnO = {
-            ...obj,
-            note: new TextEncoder().encode(`
-            a_swap_list nft swap list
-            `),
-          };
-          buildO.push(txnO);
-        } while (0);
-        do {
-          const { obj } = await builder.arc72.arc72_approve(
-            algosdk.getApplicationAddress(mp212),
-            selectedToken.tokenId
-          );
-          const txnO = {
-            ...obj,
-            payment: p1,
-            note: new TextEncoder().encode(`
-            arc72_approve nft transfer
-            `),
-          };
-          buildO.push(txnO);
-        } while (0);
-        ci.setTransfers(transfers);
-        ci.setPaymentAmount(50900);
-        ci.setExtraTxns(buildO);
-        ci.setEnableGroupResourceSharing(true);
-        customR = await ci.custom();
-        if (customR.success) break;
-      }
-      if (!customR.success) throw new Error(customR.error);
-      await toast.promise(
-        signTransactions(
-          customR.txns
-            .map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
-            .filter((txn:any) => txn !== null)
-        ),
-        {
-          pending: "Pending transaction to create swap",
-          success: "Swap created successfully",
-        }
-      );
-      const id = toast.loading(
-        "Waiting for confirmation. Page will redirect momemntarily."
-      );
-      let evt: any[] | undefined;
-      do {
-        try {
-          const evts = await ci.e_swap_ListEvent({ minRound: lastRound });
-          console.log({ evts });
-          // txId, round, ts, sId, cId, tId
-          evt = evts.find(
-            (el: any) =>
-              selectedToken.contractId === Number(el[4]) &&
-              selectedToken.tokenId === Number(el[5])
-          );
-        } catch (e: any) {
-          console.log(e);
-        }
-        await new Promise((res) => setTimeout(res, 2000));
-      } while (!evt);
-      await new Promise((res) => setTimeout(res, 4000));
-      console.log(evt);
-      if (evt) {
-        const [, , , sId, ,] = evt;
-        navigate(`/swap/${sId.toString()}`);
-      }
-      toast.update(id, {
-        render:
-          "All is good. See share link at bottom of page. Reload page if neccesary.",
-        type: "success",
-        isLoading: false,
-        autoClose: 5000,
-      });
-      // -----------------------------------------
-      // QUEST HERE swap_list_once
-      // -----------------------------------------
-      do {
-        const address = activeAccount.address;
-        const actions: string[] = [QUEST_ACTION.SWAP_LIST_ONCE];
-        const {
-          data: { results },
-        } = await getActions(address);
-        for (const action of actions) {
-          const address = activeAccount.address;
-          const key = `${action}:${address}`;
-          const completedAction = results.find((el: any) => el.key === key);
-          if (!completedAction) {
-            await submitAction(action, address);
-          }
-          // TODO notify quest completion here
-        }
-      } while (0);
-      // -----------------------------------------
-    } catch (e: any) {
-      setShowButton(true);
-      console.log(e);
-      toast.error(e.message);
+      setVoiBalance(voi ? voi.amount / 1e6 : 0); // assuming 6 decimals
+      setMp212Balance(mp212 ? mp212.amount / 1e6 : 0);
+      setHasOptedIn(!!mp212);
+    } catch (err) {
+      console.error('Failed to fetch balances:', err);
     }
   };
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const optInToMp212 = async () => {
+    setLoading(true);
+    try {
+      const suggestedParams = await algodClient.getTransactionParams().do();
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(anchorEl ? null : event.currentTarget);
+      const optInTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+        from: activeAccount!.address,
+        to: activeAccount!.address,
+        assetIndex: mp212,
+        amount: 0,
+        suggestedParams,
+      });
+      const encodedTxn = algosdk.encodeUnsignedTransaction(optInTxn);
+      const signedTxn = await signTransactions([encodedTxn]);
+      await signTransactions(signedTxn);
+      await fetchBalances(); // refresh state
+      alert('Successfully opted in to Nautilus VOI');
+    } catch (err) {
+      console.error('Opt-in error:', err);
+      alert('Failed to opt-in');
+    }
+    setLoading(false);
   };
 
-  const open = Boolean(anchorEl);
-  const id = open ? "simple-popper" : undefined;
 
-  React.useEffect(() => {
-    if (!activeAccount) return;
-    // -----------------------------------------
-    // QUEST HERE hmbl_pool_swap
-    // -----------------------------------------
-    const address = activeAccount.address;
-    const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
-    (async () => {
-      const {
-        data: { results },
-      } = await getActions(address);
-      for (const action of actions) {
-        const address = activeAccount.address;
-        const key = `${action}:${address}`;
-        const completedAction = results.find((el: any) => el.key === key);
-        if (!completedAction) {
-          await submitAction(action, address);
+
+      useEffect(() => {
+        if (!owner) return;
+        const url = `https://arc72-idx.nftnavigator.xyz/nft-indexer/v1/tokens?owner=${owner}`;
+        axios.get(url).then(({ data }) => {
+          setTokens2(data.tokens);
+        });
+      }, [owner]);
+      const handleWalletIconClick = () => {
+        if (activeAccount) wallets;
+        const provider = wallets?.find((el) => el?.metadata?.name === "kibisis");
+        provider?.connect();
+      };
+      const handleRecycleIconClick = () => {
+        if (!activeAccount) return;
+        const provider = wallets?.find((el) => el.metadata?.name === "kibisis");
+        provider?.disconnect();
+      };
+      const handleSwapButtonClick = async () => {
+        if (!activeAccount || !selectedToken || !selectedToken2) return;
+        setShowButton(false);
+        try {
+
+          // MP AND ASA ID
+          const mp212 = 8324600;
+          const voiId = 39977231;
+          const { algodClient, indexerClient } = getAlgorandClients();
+          const status = await algodClient.status().do();
+          const lastRound = status["last-round"];
+          
+          const customABI = {
+            name: "",
+            desc: "",
+            methods: [
+              
+              {
+                name: "custom",
+                args: [],
+                returns: {
+                  type: "void",
+                },
+              },
+              
+              {
+                name: "a_swap_list",
+                args: [
+                  {
+                    type: "uint64",
+                    name: "contractId",
+                  },
+                  {
+                    type: "uint256",
+                    name: "tokenId",
+                  },
+                  {
+                    type: "uint64",
+                    name: "collectionId2",
+                  },
+                  {
+                    type: "uint256",
+                    name: "tokenId2",
+                  },
+                  {
+                    type: "uint64",
+                    name: "endTime",
+                  },
+                ],
+                returns: {
+                  type: "uint256",
+                },
+              },
+            ],
+            events: [
+              {
+                name: "e_swap_ListEvent",
+                args: [
+                  {
+                    type: "uint256",
+                    name: "listingId",
+                  },
+                  {
+                    type: "uint64",
+                    name: "contractId",
+                  },
+                  {
+                    type: "uint256",
+                    name: "tokenId",
+                  },
+                  {
+                    type: "uint64",
+                    name: "contractId2",
+                  },
+                  {
+                    type: "uint256",
+                    name: "tokenId2",
+                  },
+                  {
+                    type: "uint64",
+                    name: "endTime",
+                  },
+                ],
+              },
+            ],
+          };
+          const ci = new CONTRACT(mp212, algodClient, indexerClient, customABI, {
+            addr: activeAccount.address,
+            sk: new Uint8Array(0),
+          });
+          const builder = {
+            mp212: new CONTRACT(
+              mp212,
+              algodClient,
+              indexerClient,
+              customABI,
+              {
+                addr: activeAccount.address,
+                sk: new Uint8Array(0),
+              },
+              true,
+              false,
+              true
+            ),
+            arc722: new CONTRACT(
+              selectedToken2.contractId,
+              algodClient,
+              indexerClient,
+              abi.arc72,
+              {
+                addr: activeAccount.address,
+                sk: new Uint8Array(0),
+              },
+              true,
+              false,
+              true
+            ),
+            arc72: new CONTRACT(
+              selectedToken.contractId,
+              algodClient,
+              indexerClient,
+              abi.arc72,
+              {
+                addr: activeAccount.address,
+                sk: new Uint8Array(0),
+              },
+              true,
+              false,
+              true
+            ),
+          };
+
+          const tokAddr = algosdk.getApplicationAddress(selectedToken.contractId);
+          const tokAddr2 = algosdk.getApplicationAddress(selectedToken2.contractId);
+
+          const accountInfo = await algodClient.accountInformation(tokAddr).do();
+          const accountInfo2 = await algodClient.accountInformation(tokAddr2).do();
+
+        
+
+          const [p4, p5] = [accountInfo, accountInfo2].map((accInfo) =>
+            accountInfo.amount >= accountInfo["min-balance"]
+              ? 0
+              : Math.abs(accountInfo.amount - accountInfo["min-balance"])
+          );
+
+          let customR;
+          for (const p1 of /*arc72 approve pmt*/[0, 28500]) {
+            const buildO = [];
+            const transfers = [];
+            // apply tokens towards collection minimum balance
+            if (p4 > 0) {
+              transfers.push([p4, tokAddr]);
+            }
+            // apply tokens towards collection minimum balance
+            if (p5 > 0) {
+              transfers.push([p5, tokAddr2]);
+            }
+            do {
+              const { obj } = await builder.mp212.a_swap_list(
+                selectedToken.contractId,
+                selectedToken.tokenId,
+                selectedToken2.contractId,
+                selectedToken2.tokenId,
+                lastRound + 1000
+              );
+              const txnO = {
+                ...obj,
+                note: new TextEncoder().encode(`
+            a_swap_list nft swap list
+            `),
+              };
+              buildO.push(txnO);
+            } while (0);
+            do {
+              const { obj } = await builder.arc72.arc72_approve(
+                algosdk.getApplicationAddress(mp212),
+                selectedToken.tokenId
+              );
+              const txnO = {
+                ...obj,
+                payment: p1,
+                note: new TextEncoder().encode(`
+            arc72_approve nft transfer
+            `),
+              };
+              buildO.push(txnO);
+            } while (0);
+            ci.setTransfers(transfers);
+            ci.setPaymentAmount(50900);
+            ci.setExtraTxns(buildO);
+            ci.setEnableGroupResourceSharing(true);
+            customR = await ci.custom();
+            if (customR.success) break;
+          }
+          if (!customR.success) throw new Error(customR.error);
+          await toast.promise(
+            signTransactions(
+              customR.txns
+                .map((txn: string) => new Uint8Array(Buffer.from(txn, "base64")))
+                .filter((txn: any) => txn !== null)
+            ),
+            {
+              pending: "Pending transaction to create swap",
+              success: "Swap created successfully",
+            }
+          );
+          const id = toast.loading(
+            "Waiting for confirmation. Page will redirect momemntarily."
+          );
+          let evt: any[] | undefined;
+          do {
+            try {
+              const evts = await ci.e_swap_ListEvent({ minRound: lastRound });
+              console.log({ evts });
+              // txId, round, ts, sId, cId, tId
+              evt = evts.find(
+                (el: any) =>
+                  selectedToken.contractId === Number(el[4]) &&
+                  selectedToken.tokenId === Number(el[5])
+              );
+            } catch (e: any) {
+              console.log(e);
+            }
+            await new Promise((res) => setTimeout(res, 2000));
+          } while (!evt);
+          await new Promise((res) => setTimeout(res, 4000));
+          console.log(evt);
+          if (evt) {
+            const [, , , sId, ,] = evt;
+            navigate(`/swap/${sId.toString()}`);
+          }
+          toast.update(id, {
+            render:
+              "All is good. See share link at bottom of page. Reload page if neccesary.",
+            type: "success",
+            isLoading: false,
+            autoClose: 5000,
+          });
+          // -----------------------------------------
+          // QUEST HERE swap_list_once
+          // -----------------------------------------
+          do {
+            const address = activeAccount.address;
+            const actions: string[] = [QUEST_ACTION.SWAP_LIST_ONCE];
+            const {
+              data: { results },
+            } = await getActions(address);
+            for (const action of actions) {
+              const address = activeAccount.address;
+              const key = `${action}:${address}`;
+              const completedAction = results.find((el: any) => el.key === key);
+              if (!completedAction) {
+                await submitAction(action, address);
+              }
+              // TODO notify quest completion here
+            }
+          } while (0);
+          
+        } catch (e: any) {
+          setShowButton(true);
+          console.log(e);
+          toast.error(e.message);
         }
-        // TODO notify quest completion here
-      }
-    })();
-    // -----------------------------------------
-  }, [activeAccount]);
+      };
 
-  const handleNetworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setIsMainnet(activeNetwork !==NetworkId.MAINNET);
-    setActiveNetwork(activeNetwork !==NetworkId.MAINNET? NetworkId.MAINNET : NetworkId.TESTNET);
-  };
+      const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
-  const isLoading = false;
-  return !isLoading ? (
-    <Layout>
-      <div
-        style={{
-          display: "block",
-          position: "absolute",
-          right: "0px",
-        }}
-      >
-        <div
-          style={{
-            //width: activeAccount ? "300px" : "60px",
-            background: "#4D005A",
-            borderRadius: "0px 0px 0px 30px",
-            padding: "10px",
-            display: "flex",
-            justifyContent: "start",
-            gap: "12px",
-          }}
-        >
-          {!activeAccount ? (
-            <WalletModal />
-          ) : (
+      const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(anchorEl ? null : event.currentTarget);
+      };
+
+      const open = Boolean(anchorEl);
+      const id = open ? "simple-popper" : undefined;
+
+      React.useEffect(() => {
+        if (!activeAccount) return;
+        
+        
+        
+        const address = activeAccount.address;
+        const actions: string[] = [QUEST_ACTION.CONNECT_WALLET];
+        (async () => {
+          const {
+            data: { results },
+          } = await getActions(address);
+          for (const action of actions) {
+            const address = activeAccount.address;
+            const key = `${action}:${address}`;
+            const completedAction = results.find((el: any) => el.key === key);
+            if (!completedAction) {
+              await submitAction(action, address);
+            }
+          
+          }
+        })();
+       
+      }, [activeAccount]);
+
+      const handleNetworkChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setIsMainnet(activeNetwork !== NetworkId.MAINNET);
+        setActiveNetwork(activeNetwork !== NetworkId.MAINNET ? NetworkId.MAINNET : NetworkId.TESTNET);
+      };
+
+      const isLoading = false;
+      return !isLoading ? (
+        <Layout>
+          <div
+            style={{
+              display: "block",
+              position: "absolute",
+              right: "0px",
+            }}
+          >
             <div
               style={{
-                zIndex: 100,
+                //width: activeAccount ? "300px" : "60px",
+                background: "#4D005A",
+                borderRadius: "0px 0px 0px 30px",
+                padding: "10px",
+                display: "flex",
+                justifyContent: "start",
+                gap: "12px",
               }}
             >
-              <img
-                aria-describedby={id}
-                onClick={handleClick}
-                style={{
-                  height: "45px",
-                  cursor: "pointer",
-                  zIndex: 100,
-                }}
-                src={WalletIcon}
-              />
-              <Popper
-                id={id}
-                open={open}
-                anchorEl={anchorEl}
-                placement="auto"
-                sx={{
-                  zIndex: 9999,
-                }}
-              >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    width: 300,
-                    right: 30,
-                    border: 1,
-                    p: 1,
-                    bgcolor: "background.paper",
-                    borderRadius: "30px",
+              {!activeAccount ? (
+                <WalletModal />
+              ) : (
+                <div
+                  style={{
+                    zIndex: 100,
                   }}
                 >
-                  <ul
+                  <img
+                    aria-describedby={id}
+                    onClick={handleClick}
                     style={{
-                      paddingLeft: 0,
+                      height: "45px",
+                      cursor: "pointer",
+                      zIndex: 100,
+                    }}
+                    src={WalletIcon}
+                  />
+                  <Popper
+                    id={id}
+                    open={open}
+                    anchorEl={anchorEl}
+                    placement="auto"
+                    sx={{
+                      zIndex: 9999,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
-                      <label style={{ marginRight: "10px", color: "#000" }}>Network:</label>
-                      <Switch
-                        checked={activeNetwork==NetworkId.MAINNET}
-                        onChange={handleNetworkChange}
-                        color="primary"
-                        inputProps={{ 'aria-label': 'controlled' }}
-                      />
-                      <span style={{ color: "#000" }}>{isMainnet ? "Mainnet" : "Testnet"}</span>
-                    </div>
-                    {wallets && // Conditional Check
-                      wallets?.map((account, i) => {
-                        return (
-                          <li
-                            style={{
-                              listStyleType: "none",
-                              height: "30px",
-                            }}
-                            key={i}
-                          >
-                            <Stack
-                              direction="row"
-                              gap={2}
-                              sx={{ justifyContent: "space-between" }}
-                            >
-                              <div className="flex gap-2 ">
-                                {account?.isConnected ? `${account.activeAccount?.address.slice(0, 4)}...
-                                ${account.activeAccount?.address.slice(-4)}` : <div className="">
-                                  <img className="rounded-full" width={20} height={20} src={account?.metadata?.icon} /> {account?.metadata?.name}
-                                </div>}
-                              </div>
-                              <div>
-                                {account?.isConnected ? null : (
-                                  <button
-                                    onClick={() => {
-                                      account?.connect().catch((err) => {
-                                        console.log({ err })
-                                        toast.error("Failed to connect wallet")
-                                      })
-                                    }}
-                                  >
-                                    Connect
-                                  </button>
-                                )}
-                                {account?.isConnected ? (
-                                  <button
-                                    onClick={() => {
-                                      account?.disconnect().catch((err) => {
-                                        console.log({ err });
-                                        toast.error("Failed to disconnect wallet");
-                                      });
-                                    }}
-                                  >
-                                    Disconnect
-                                  </button>
-                                ) : null}
-                              </div>
-                            </Stack>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </Box>
-              </Popper>
-            </div>
-          )}
-          {activeAccount ? (
-            <>
-              <Stack
-                sx={{
-                  justifyContent: "space-between",
-                }}
-              >
-                <div
-                  className="jockey-one-regular"
-                  style={{
-                    textAlign: "left",
-                    color: "#FFD54F",
-                    textShadow: "1px 1px 0px 0px #FFA000",
-                  }}
-                >
-                  {activeAccount?.address?.slice(0, 6)}...
-                </div>
-                <div
-                  className="jockey-one-regular"
-                  style={{
-                    textAlign: "right",
-                    color: "#FFD54F",
-                    textShadow: "1px 1px 0px 0px #FFA000",
-                  }}
-                >
-                  ...{activeAccount?.address?.slice(-6)}
-                </div>
-              </Stack>
-
-              {/* THE RECYCLE ICON FOR THE WALLET */}
-              <img
-                src={RecycleIcon}
-                style={{ height: "45px", cursor: "pointer", zIndex: 100 }}
-                onClick={handleRecycleIconClick}
-              />
-            </>
-          ) : null}
-        </div>
-      </div>
-      <div
-        style={{
-          top: 0,
-          left: 0,
-          position: "absolute",
-          height: "100%",
-          width: "100%",
-        }}
-      >
-        <Container>
-          <Stack gap={2} sx={{ pb: "50px" }}>
-            <Link to="/">
-              <Box
-                sx={{
-                  mt: "80px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <img
-                  src="/img/banner-mecha-swap.png"
-                  style={{ width: "60%" }}
-                />
-              </Box>
-            </Link>
-            <div
-              style={{
-                background: "#4D005A",
-                borderRadius: "30px",
-                padding: "20px",
-              }}
-            >
-              <Grid
-                container
-                spacing={2}
-                sx={
-                  {
-                    //minHeight: "355px",
-                  }
-                }
-              >
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <label style={{ color: "#fff" }}>NFT</label>
-                    <Autocomplete
-                      fullWidth
-                      disablePortal
-                      id="combo-box-demo"
-                      onChange={(e, newValue) => {
-                        setSelectedToken(newValue?.value);
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        width: 300,
+                        right: 30,
+                        border: 1,
+                        p: 1,
+                        bgcolor: "background.paper",
+                        borderRadius: "30px",
                       }}
-                      options={tokens.map((t) => {
-                        const tm = JSON.parse(t.metadata);
-                        return {
-                          label: tm.name,
-                          value: {
-                            ...t,
-                            metadata: tm,
-                          },
-                        };
-                      })}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          sx={{
-                            backgroundColor: "#fff",
-                            borderRadius: "10px",
-                          }}
-                        />
-                      )}
+                    >
+                      <ul
+                        style={{
+                          paddingLeft: 0,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                          <label style={{ marginRight: "10px", color: "#000" }}>Network:</label>
+                          <Switch
+                            checked={activeNetwork == NetworkId.MAINNET}
+                            onChange={handleNetworkChange}
+                            color="primary"
+                            inputProps={{ 'aria-label': 'controlled' }}
+                          />
+                          <span style={{ color: "#000" }}>{isMainnet ? "Mainnet" : "Testnet"}</span>
+                        </div>
+                        {wallets &&
+                          wallets?.map((account, i) => {
+                            return (
+                              <li
+                                style={{
+                                  listStyleType: "none",
+                                  height: "30px",
+                                }}
+                                key={i}
+                              >
+                                <Stack
+                                  direction="row"
+                                  gap={2}
+                                  sx={{ justifyContent: "space-between" }}
+                                >
+                                  <div className="flex gap-2 ">
+                                    {account?.isConnected ? `${account.activeAccount?.address.slice(0, 4)}...
+                                ${account.activeAccount?.address.slice(-4)}` : <div className="">
+                                      <img className="rounded-full" width={20} height={20} src={account?.metadata?.icon} /> {account?.metadata?.name}
+                                    </div>}
+                                  </div>
+                                  <div>
+                                    {account?.isConnected ? null : (
+                                      <button
+                                        onClick={() => {
+                                          account?.connect().catch((err) => {
+                                            console.log({ err })
+                                            toast.error("Failed to connect wallet")
+                                          })
+                                        }}
+                                      >
+                                        Connect
+                                      </button>
+                                    )}
+                                    {account?.isConnected ? (
+                                      <button
+                                        onClick={() => {
+                                          account?.disconnect().catch((err) => {
+                                            console.log({ err });
+                                            toast.error("Failed to disconnect wallet");
+                                          });
+                                        }}
+                                      >
+                                        Disconnect
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </Stack>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </Box>
+                  </Popper>
+                </div>
+              )}
+              {activeAccount ? (
+                <>
+                  <Stack
+                    sx={{
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div
+                      className="jockey-one-regular"
+                      style={{
+                        textAlign: "left",
+                        color: "#FFD54F",
+                        textShadow: "1px 1px 0px 0px #FFA000",
+                      }}
+                    >
+                      {activeAccount?.address?.slice(0, 6)}...
+                    </div>
+                    <div
+                      className="jockey-one-regular"
+                      style={{
+                        textAlign: "right",
+                        color: "#FFD54F",
+                        textShadow: "1px 1px 0px 0px #FFA000",
+                      }}
+                    >
+                      ...{activeAccount?.address?.slice(-6)}
+                    </div>
+                  </Stack>
+
+                  {/* THE RECYCLE ICON FOR THE WALLET */}
+                  <img
+                    src={RecycleIcon}
+                    style={{ height: "45px", cursor: "pointer", zIndex: 100 }}
+                    onClick={handleRecycleIconClick}
+                  />
+                </>
+              ) : null}
+            </div>
+          </div>
+          <div
+            style={{
+              top: 0,
+              left: 0,
+              position: "absolute",
+              height: "100%",
+              width: "100%",
+            }}
+          >
+            <Container>
+              <Stack gap={2} sx={{ pb: "50px" }}>
+                <Link to="/">
+                  <Box
+                    sx={{
+                      mt: "80px",
+                      display: "flex",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <img
+                      src="/img/banner-mecha-swap.png"
+                      style={{ width: "60%" }}
                     />
                   </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <img
-                    src={selectedToken?.metadata?.image}
-                    style={{ width: "100%", borderRadius: "30px" }}
-                  />
-                </Grid>
-              </Grid>
-            </div>
-            <div
-              style={{
-                background: "#4D005A",
-                borderRadius: "30px",
-                padding: "20px",
-              }}
-            >
-              <Grid
-                container
-                spacing={2}
-                sx={
-                  {
-                    //minHeight: "355px"
-                  }
-                }
-              >
-                <Grid item xs={12} sm={6}>
-                  <Stack gap={2}>
-                    <Box>
-                      <label style={{ color: "#fff" }}>Owner</label>
-                      <TextField
-                        fullWidth
-                        sx={{
-                          backgroundColor: "#fff",
-                          borderRadius: "10px",
-                        }}
-                        onChange={(e: any) => {
-                          setOwner(e.target.value);
-                        }}
+                </Link>
+                <div
+                  style={{
+                    background: "#4D005A",
+                    borderRadius: "30px",
+                    padding: "20px",
+                  }}
+                >
+                  <Grid
+                    container
+                    spacing={2}
+                    sx={
+                      {
+                        //minHeight: "355px",
+                      }
+                    }
+                  >
+                    <Grid item xs={12} sm={6}>
+                      <Box>
+                        <label style={{ color: "#fff" }}>NFT</label>
+                        <Autocomplete
+                          fullWidth
+                          disablePortal
+                          id="combo-box-demo"
+                          onChange={(e, newValue) => {
+                            setSelectedToken(newValue?.value);
+                          }}
+                          options={tokens.map((t) => {
+                            const tm = JSON.parse(t.metadata);
+                            return {
+                              label: tm.name,
+                              value: {
+                                ...t,
+                                metadata: tm,
+                              },
+                            };
+                          })}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              sx={{
+                                backgroundColor: "#fff",
+                                borderRadius: "10px",
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <img
+                        src={selectedToken?.metadata?.image}
+                        style={{ width: "100%", borderRadius: "30px" }}
                       />
-                    </Box>
-                    <Box>
-                      <label style={{ color: "#fff" }}>NFT</label>
-                      <Autocomplete
-                        fullWidth
-                        disablePortal
-                        id="combo-box-demo"
-                        onChange={(e, newValue) => {
-                          setSelectedToken2(newValue?.value);
-                        }}
-                        options={tokens2.map((t) => {
-                          const tm = JSON.parse(t.metadata);
-                          return {
-                            label: tm.name,
-                            value: {
-                              ...t,
-                              metadata: tm,
-                            },
-                          };
-                        })}
-                        renderInput={(params) => (
+                    </Grid>
+                  </Grid>
+                </div>
+                <div
+                  style={{
+                    background: "#4D005A",
+                    borderRadius: "30px",
+                    padding: "20px",
+                  }}
+                >
+                  <Grid
+                    container
+                    spacing={2}
+                    sx={
+                      {
+                        //minHeight: "355px"
+                      }
+                    }
+                  >
+                    <Grid item xs={12} sm={6}>
+                      <Stack gap={2}>
+                        <Box>
+                          <label style={{ color: "#fff" }}>Owner</label>
                           <TextField
-                            {...params}
+                            fullWidth
                             sx={{
                               backgroundColor: "#fff",
                               borderRadius: "10px",
                             }}
+                            onChange={(e: any) => {
+                              setOwner(e.target.value);
+                            }}
                           />
-                        )}
+                        </Box>
+                        <Box>
+                          <label style={{ color: "#fff" }}>NFT</label>
+                          <Autocomplete
+                            fullWidth
+                            disablePortal
+                            id="combo-box-demo"
+                            onChange={(e, newValue) => {
+                              setSelectedToken2(newValue?.value);
+                            }}
+                            options={tokens2.map((t) => {
+                              const tm = JSON.parse(t.metadata);
+                              return {
+                                label: tm.name,
+                                value: {
+                                  ...t,
+                                  metadata: tm,
+                                },
+                              };
+                            })}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                sx={{
+                                  backgroundColor: "#fff",
+                                  borderRadius: "10px",
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Stack>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <img
+                        src={selectedToken2?.metadata?.image}
+                        style={{ width: "100%", borderRadius: "30px" }}
                       />
-                    </Box>
-                  </Stack>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <img
-                    src={selectedToken2?.metadata?.image}
-                    style={{ width: "100%", borderRadius: "30px" }}
-                  />
-                </Grid>
-              </Grid>
-            </div>
-            {showButton ? (
-              <Button
-                onClick={handleSwapButtonClick}
-                size="large"
-                sx={{ borderRadius: "30px" }}
-                variant="contained"
+                    </Grid>
+                  </Grid>
+                </div>
+                {showButton ? (
+                  <Button
+                    onClick={handleSwapButtonClick}
+                    size="large"
+                    sx={{ borderRadius: "30px" }}
+                    variant="contained"
+                  >
+                    Create Swap
+                  </Button>
+                ) : null}
+              </Stack>
+            </Container>
+          </div>
+
+
+          <div className="p-4 rounded-xl shadow-lg bg-white max-w-md mx-auto">
+      <h2 className="text-xl font-bold mb-2">Convert VOI to Nautilus VOI</h2>
+
+      {!activeAccount && <p>Please connect your wallet first.</p>}
+
+      {activeAccount && (
+        <>
+          <p>Your VOI Balance: <strong>{voiBalance}</strong></p>
+          <p>Your Nautilus VOI Balance: <strong>{mp212Balance}</strong></p>
+
+          {!hasOptedIn && (
+            <button
+              onClick={optInToMp212}
+              disabled={loading}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white cursor-pointer rounded-xl hover:bg-blue-700"
+            >
+              {loading ? 'Opting in...' : 'Opt-in to Nautilus VOI'}
+            </button>
+          )}
+
+          {hasOptedIn && (
+            <div className="mt-4">
+              <p className="mb-2 text-green-600 font-medium">
+                You're ready! Now swap VOI to Nautilus VOI using:
+              </p>
+              <a
+                href="https://nautilus.sh/swap"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-2 text-blue-500 underline"
               >
-                Create Swap
-              </Button>
-            ) : null}
-          </Stack>
-        </Container>
-      </div>
-    </Layout>
-  ) : (
-    <InterstitialBanner />
-  );
-};
+                🔁 Go to Nautilus DEX to swap
+              </a>
+              <a
+                href="https://app.pact.fi/swap"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-1 text-blue-500 underline"
+              >
+                🔁 Or use Pact DEX
+              </a>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+
+        </Layout>
+      ) : (
+        <InterstitialBanner />
+      );
+    };
